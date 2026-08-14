@@ -1,0 +1,129 @@
+[
+  {
+    "name": "Admiralty Inlet",
+    "lat": 48.1500,
+    "lon": -122.7167
+  },
+  {
+    "name": "Deception Pass",
+    "lat": 48.4064,
+    "lon": -122.6428
+  },
+  {
+    "name": "Agate Passage",
+    "lat": 47.7128,
+    "lon": -122.5464
+  },
+  {
+    "name": "Colvos Passage",
+    "lat": 47.4167,
+    "lon": -122.5500
+  },
+  {
+    "name": "Swinomish Channel",
+    "lat": 48.4200,
+    "lon": -122.5378
+  },
+  {
+    "name": "Rosario Strait",
+    "lat": 48.5667,
+    "lon": -122.7500
+  },
+  {
+    "name": "Haro Strait",
+    "lat": 48.5833,
+    "lon": -123.1833
+  },
+  {
+    "name": "Active Pass",
+    "lat": 48.8664,
+    "lon": -123.2894
+  },
+  {
+    "name": "Dodd Narrows",
+    "lat": 49.1319,
+    "lon": -123.8083
+  },
+  {
+    "name": "Cattle Pass",
+    "lat": 48.4506,
+    "lon": -122.9522
+  },
+  {
+    "name": "Ballard Locks",
+    "aliases": ["the Ballard Locks"],
+    "lat": 47.6653,
+    "lon": -122.3967
+  },
+  {
+    "name": "Drayton Passage",
+    "lat": 47.2167,
+    "lon": -122.7833
+  },
+  {
+    "name": "Port Townsend Canal",
+    "lat": 48.0833,
+    "lon": -122.7333
+  },
+  {
+    "name": "Saratoga Passage",
+    "lat": 48.1833,
+    "lon": -122.5333
+  },
+  {
+    "name": "Guemes Channel",
+    "lat": 48.5167,
+    "lon": -122.6333
+  },
+  {
+    "name": "Thatcher Pass",
+    "lat": 48.5167,
+    "lon": -122.7167
+  },
+  {
+    "name": "President Channel",
+    "lat": 48.6667,
+    "lon": -122.9333
+  },
+  {
+    "name": "Lawrence Pt.",
+    "aliases": ["Lawrence Point"],
+    "lat": 48.6833,
+    "lon": -122.8167
+  },
+  {
+    "name": "Bedwell Harbour",
+    "lat": 48.7333,
+    "lon": -123.2167
+  },
+  {
+    "name": "Nanaimo",
+    "lat": 49.1667,
+    "lon": -123.9333
+  },
+  {
+    "name": "Egmont",
+    "lat": 49.7500,
+    "lon": -123.9167
+  },
+  {
+    "name": "Boundary Pass",
+    "lat": 48.7333,
+    "lon": -123.0833
+  },
+  {
+    "name": "Trincomali Channel",
+    "lat": 48.9500,
+    "lon": -123.5333
+  },
+  {
+    "name": "Discovery Passage",
+    "lat": 50.1000,
+    "lon": -125.3333
+  },
+  {
+    "name": "Seymour Narrows",
+    "lat": 50.1333,
+    "lon": -125.3500
+  }
+]

@@ -39,3 +39,19 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+## Panda
+styled-system
+styled-system-studio
+
+## Staged from node_modules by scripts/copy-maplibre-worker.mjs
+/public/maplibre/
+
+## Scraped nwcruising.net data — no redistribution permission has been
+## sought, so this stays a local, regenerable cache (npm run scrape).
+## See README.md.
+/data/raw/*
+!/data/raw/.gitkeep
+/public/data/*.geojson
+/public/data/edges.json
+!/public/data/waypoints.json

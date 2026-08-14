@@ -2,23 +2,46 @@
   "name": "salish-nav-planner",
   "version": "0.1.0",
   "private": true,
+  "type": "module",
+  "engines": {
+    "node": ">=24"
+  },
   "scripts": {
-    "dev": "next dev",
-    "build": "next build",
+    "dev": "npm run maplibre-worker && panda codegen --silent && next dev",
+    "build": "npm run maplibre-worker && panda codegen --silent && next build",
     "start": "next start",
-    "lint": "eslint"
+    "maplibre-worker": "node scripts/copy-maplibre-worker.mjs",
+    "postinstall": "node scripts/copy-maplibre-worker.mjs",
+    "lint": "eslint",
+    "typecheck": "panda codegen --silent && tsc --noEmit",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "scrape": "tsx scripts/scrape-nwcruising.ts"
   },
   "dependencies": {
+    "@ark-ui/react": "^5.38.1",
+    "maplibre-gl": "^6.3.0",
     "next": "16.3.0",
+    "pmtiles": "^4.5.0",
     "react": "19.2.8",
-    "react-dom": "19.2.8"
+    "react-dom": "19.2.8",
+    "server-only": "^0.0.1"
   },
   "devDependencies": {
+    "@pandacss/dev": "^1.12.0",
+    "@park-ui/panda-preset": "^0.43.1",
+    "@testing-library/jest-dom": "^7.0.1",
+    "@testing-library/react": "^16.3.2",
+    "@types/jsdom": "^30.0.0",
     "@types/node": "^20",
     "@types/react": "^19",
     "@types/react-dom": "^19",
+    "@vitejs/plugin-react": "^6.0.5",
     "eslint": "^9",
     "eslint-config-next": "16.3.0",
-    "typescript": "^5"
+    "jsdom": "^29.1.1",
+    "tsx": "^4.23.12",
+    "typescript": "^5",
+    "vitest": "^4.1.10"
   }
 }
