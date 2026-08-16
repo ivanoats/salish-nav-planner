@@ -29,8 +29,6 @@ export default defineConfig({
         "src/**/*.test.ts",
         "src/**/*.test.tsx",
         "src/**/ports/**",
-        "src/domain/location.ts",
-        "src/domain/route.ts",
       ],
       thresholds: {
         statements: 80,

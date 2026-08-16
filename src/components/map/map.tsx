@@ -151,7 +151,7 @@ export function MapView({
 
     const map = new MapLibreMap({
       container: containerRef.current,
-      center: SALISH_SEA_CENTER,
+      center: [SALISH_SEA_CENTER[0], SALISH_SEA_CENTER[1]],
       zoom: SALISH_SEA_ZOOM,
       style: { version: 8, sources, layers },
     });

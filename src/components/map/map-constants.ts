@@ -1,7 +1,7 @@
 /** Salish Sea map view constants shared across map components. */
 
 /** Default center for the Salish Sea region. */
-export const SALISH_SEA_CENTER: [number, number] = [-123.1, 48.3];
+export const SALISH_SEA_CENTER: readonly [number, number] = [-123.1, 48.3];
 
 /** Default zoom level to show the full Salish Sea area. */
 export const SALISH_SEA_ZOOM = 7;

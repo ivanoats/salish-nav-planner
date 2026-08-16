@@ -94,7 +94,7 @@ src/
 - **Target**: 80% coverage across statements, branches, functions, and lines —
   enforced in CI.
 - Test files live in `__tests__/` sibling directories: `foo.ts` → `__tests__/foo.test.ts`.
-- Coverage includes `src/domain/`, `src/application/`, and `src/adapters/`.
+- Coverage includes `src/domain/` and `src/application/`.
 
 ## CI/CD
 
