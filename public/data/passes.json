@@ -1,0 +1,705 @@
+[
+  {
+    "id": "deception-pass",
+    "name": "Deception Pass",
+    "lat": 48.4064,
+    "lon": -122.6428,
+    "station": {
+      "source": "noaa",
+      "id": "PUG1701",
+      "bin": 33,
+      "depthFeet": 18
+    },
+    "stationName": "Deception Pass (Narrows)",
+    "floodDirectionDegrees": 108,
+    "maxKnots": 7.4
+  },
+  {
+    "id": "admiralty-inlet",
+    "name": "Admiralty Inlet",
+    "lat": 48.15,
+    "lon": -122.7167,
+    "aliases": [
+      "Point Wilson"
+    ],
+    "station": {
+      "source": "noaa",
+      "id": "PUG1624",
+      "bin": 47,
+      "depthFeet": 21
+    },
+    "stationName": "Point Wilson, 1.6 mi. NE of",
+    "floodDirectionDegrees": 126,
+    "maxKnots": 4.8
+  },
+  {
+    "id": "tacoma-narrows",
+    "name": "Tacoma Narrows",
+    "lat": 47.2743,
+    "lon": -122.5453,
+    "aliases": [
+      "The Narrows"
+    ],
+    "station": {
+      "source": "noaa",
+      "id": "PUG1527",
+      "bin": 19,
+      "depthFeet": 23
+    },
+    "stationName": "The Narrows, 0.3 miles North of Bridge",
+    "floodDirectionDegrees": 198,
+    "maxKnots": 5.5
+  },
+  {
+    "id": "colvos-passage",
+    "name": "Colvos Passage",
+    "lat": 47.4167,
+    "lon": -122.55,
+    "station": {
+      "source": "noaa",
+      "id": "PUG1518",
+      "bin": 19,
+      "depthFeet": 35
+    },
+    "stationName": "Anderson Point, East of, Colvos Passage",
+    "floodDirectionDegrees": 183,
+    "maxKnots": 1.4
+  },
+  {
+    "id": "agate-passage",
+    "name": "Agate Passage",
+    "lat": 47.7128,
+    "lon": -122.5464,
+    "aliases": [
+      "Agate Pass"
+    ],
+    "station": {
+      "source": "noaa",
+      "id": "PUG1501",
+      "bin": 6,
+      "depthFeet": 9
+    },
+    "stationName": "Agate Passage, south end",
+    "floodDirectionDegrees": 203,
+    "maxKnots": 4.1
+  },
+  {
+    "id": "rich-passage",
+    "name": "Rich Passage",
+    "lat": 47.585,
+    "lon": -122.555,
+    "station": {
+      "source": "noaa",
+      "id": "PUG1513",
+      "bin": 10,
+      "depthFeet": 11
+    },
+    "stationName": "Rich Passage, East end",
+    "floodDirectionDegrees": 326,
+    "maxKnots": 1.4
+  },
+  {
+    "id": "port-townsend-canal",
+    "name": "Port Townsend Canal",
+    "lat": 48.0325,
+    "lon": -122.7326,
+    "station": {
+      "source": "noaa",
+      "id": "PUG1614",
+      "bin": 7,
+      "depthFeet": 5
+    },
+    "stationName": "Port Townsend Canal",
+    "floodDirectionDegrees": 140,
+    "maxKnots": 4.5
+  },
+  {
+    "id": "dana-passage",
+    "name": "Dana Passage",
+    "lat": 47.165,
+    "lon": -122.87,
+    "station": {
+      "source": "noaa",
+      "id": "PUG1539",
+      "bin": 12,
+      "depthFeet": 16
+    },
+    "stationName": "Dana Passage",
+    "floodDirectionDegrees": 242,
+    "maxKnots": 2.8
+  },
+  {
+    "id": "balch-passage",
+    "name": "Balch Passage",
+    "lat": 47.2,
+    "lon": -122.69,
+    "station": {
+      "source": "noaa",
+      "id": "PUG1535",
+      "bin": 16,
+      "depthFeet": 11
+    },
+    "stationName": "Balch Passage, NE of Eagle Island",
+    "floodDirectionDegrees": 287,
+    "maxKnots": 2.9
+  },
+  {
+    "id": "drayton-passage",
+    "name": "Drayton Passage",
+    "lat": 47.2167,
+    "lon": -122.7833,
+    "station": {
+      "source": "noaa",
+      "id": "PUG1537",
+      "bin": 20,
+      "depthFeet": 19
+    },
+    "stationName": "Drayton Passage",
+    "floodDirectionDegrees": 215,
+    "maxKnots": 0.6
+  },
+  {
+    "id": "pickering-passage",
+    "name": "Pickering Passage",
+    "lat": 47.26,
+    "lon": -122.88,
+    "station": {
+      "source": "noaa",
+      "id": "PUG1546",
+      "bin": 14,
+      "depthFeet": 9
+    },
+    "stationName": "Pickering Passage, West of Squaxin Island",
+    "floodDirectionDegrees": 194,
+    "maxKnots": 2.3
+  },
+  {
+    "id": "hale-passage-south",
+    "name": "Hale Passage",
+    "lat": 47.31,
+    "lon": -122.66,
+    "station": {
+      "source": "noaa",
+      "id": "PUG1529",
+      "bin": 11,
+      "depthFeet": 11
+    },
+    "stationName": "Hale Passage, East end",
+    "floodDirectionDegrees": 325,
+    "maxKnots": 1.1
+  },
+  {
+    "id": "cattle-pass",
+    "name": "Cattle Pass",
+    "lat": 48.4506,
+    "lon": -122.9522,
+    "aliases": [
+      "Cattle Point",
+      "San Juan Channel"
+    ],
+    "station": {
+      "source": "noaa",
+      "id": "PUG1703",
+      "bin": 17,
+      "depthFeet": 75
+    },
+    "stationName": "San Juan Channel, south entrance",
+    "floodDirectionDegrees": 347,
+    "maxKnots": 5.1
+  },
+  {
+    "id": "rosario-strait",
+    "name": "Rosario Strait",
+    "lat": 48.5667,
+    "lon": -122.75,
+    "station": {
+      "source": "noaa",
+      "id": "PUG1702",
+      "bin": 16,
+      "depthFeet": 47
+    },
+    "stationName": "Rosario Strait",
+    "floodDirectionDegrees": 357,
+    "maxKnots": 3.5
+  },
+  {
+    "id": "guemes-channel",
+    "name": "Guemes Channel",
+    "lat": 48.5167,
+    "lon": -122.6333,
+    "station": {
+      "source": "noaa",
+      "id": "PUG1734",
+      "bin": 14,
+      "depthFeet": 11
+    },
+    "stationName": "Guemes Channel, West Entrance",
+    "floodDirectionDegrees": 83,
+    "maxKnots": 4
+  },
+  {
+    "id": "thatcher-pass",
+    "name": "Thatcher Pass",
+    "lat": 48.5167,
+    "lon": -122.7167,
+    "station": {
+      "source": "noaa",
+      "id": "PUG1733",
+      "bin": 22,
+      "depthFeet": 28
+    },
+    "stationName": "Thatcher Pass",
+    "floodDirectionDegrees": 256,
+    "maxKnots": 2.4
+  },
+  {
+    "id": "burrows-pass",
+    "name": "Burrows Pass",
+    "lat": 48.49,
+    "lon": -122.68,
+    "station": {
+      "source": "noaa",
+      "id": "PUG1738",
+      "bin": 27,
+      "depthFeet": 15
+    },
+    "stationName": "Burrows Pass",
+    "floodDirectionDegrees": 286,
+    "maxKnots": 3.8
+  },
+  {
+    "id": "lopez-pass",
+    "name": "Lopez Pass",
+    "lat": 48.4797,
+    "lon": -122.8189,
+    "station": {
+      "source": "noaa",
+      "id": "PUG1730",
+      "bin": 17,
+      "depthFeet": 15
+    },
+    "stationName": "Lopez Pass",
+    "floodDirectionDegrees": 286,
+    "maxKnots": 3.7
+  },
+  {
+    "id": "obstruction-pass",
+    "name": "Obstruction Pass",
+    "lat": 48.5983,
+    "lon": -122.8264,
+    "station": {
+      "source": "noaa",
+      "id": "PUG1705",
+      "bin": 15,
+      "depthFeet": 8
+    },
+    "stationName": "Obstruction Pass, north of Obstruction Island",
+    "floodDirectionDegrees": 87,
+    "maxKnots": 2.3
+  },
+  {
+    "id": "peavine-pass",
+    "name": "Peavine Pass",
+    "lat": 48.595,
+    "lon": -122.81,
+    "station": {
+      "source": "noaa",
+      "id": "PUG1704",
+      "bin": 13,
+      "depthFeet": 9
+    },
+    "stationName": "Peavine Pass, west entrance",
+    "floodDirectionDegrees": 56,
+    "maxKnots": 3.5
+  },
+  {
+    "id": "wasp-passage",
+    "name": "Wasp Passage",
+    "lat": 48.5925,
+    "lon": -122.9896,
+    "station": {
+      "source": "noaa",
+      "id": "PUG1721",
+      "bin": 17,
+      "depthFeet": 11
+    },
+    "stationName": "Wasp Passage narrows",
+    "floodDirectionDegrees": 256,
+    "maxKnots": 2.9
+  },
+  {
+    "id": "upright-channel",
+    "name": "Upright Channel",
+    "lat": 48.5538,
+    "lon": -122.9226,
+    "station": {
+      "source": "noaa",
+      "id": "PUG1723",
+      "bin": 18,
+      "depthFeet": 24
+    },
+    "stationName": "Upright Channel narrows",
+    "floodDirectionDegrees": 40,
+    "maxKnots": 2.6
+  },
+  {
+    "id": "harney-channel",
+    "name": "Harney Channel",
+    "lat": 48.61,
+    "lon": -122.92,
+    "station": {
+      "source": "noaa",
+      "id": "PUG1722",
+      "bin": 27,
+      "depthFeet": 13
+    },
+    "stationName": "Harney Channel, north of Point Hudson",
+    "floodDirectionDegrees": 263,
+    "maxKnots": 1.7
+  },
+  {
+    "id": "spieden-channel",
+    "name": "Spieden Channel",
+    "lat": 48.64,
+    "lon": -123.12,
+    "station": {
+      "source": "noaa",
+      "id": "PUG1719",
+      "bin": 19,
+      "depthFeet": 47
+    },
+    "stationName": "Spieden Channel, north of Limestone Point",
+    "floodDirectionDegrees": 85,
+    "maxKnots": 4.2
+  },
+  {
+    "id": "president-channel",
+    "name": "President Channel",
+    "lat": 48.6667,
+    "lon": -122.9333,
+    "station": {
+      "source": "noaa",
+      "id": "PUG1715",
+      "bin": 38,
+      "depthFeet": 69
+    },
+    "stationName": "President Channel, East of Point Disney",
+    "floodDirectionDegrees": 37,
+    "maxKnots": 2.3
+  },
+  {
+    "id": "haro-strait",
+    "name": "Haro Strait",
+    "lat": 48.5833,
+    "lon": -123.1833,
+    "station": {
+      "source": "noaa",
+      "id": "PUG1718",
+      "bin": 36,
+      "depthFeet": 66
+    },
+    "stationName": "Haro Strait, 1.2 nm west of Kellett Bluff",
+    "floodDirectionDegrees": 346,
+    "maxKnots": 2.5
+  },
+  {
+    "id": "boundary-pass",
+    "name": "Boundary Pass",
+    "lat": 48.7333,
+    "lon": -123.0833,
+    "aliases": [
+      "Turn Point"
+    ],
+    "station": {
+      "source": "noaa",
+      "id": "PUG1717",
+      "bin": 35,
+      "depthFeet": 116
+    },
+    "stationName": "Turn Point, Boundary Pass",
+    "floodDirectionDegrees": 3,
+    "maxKnots": 3.7
+  },
+  {
+    "id": "swinomish-channel",
+    "name": "Swinomish Channel",
+    "lat": 48.42,
+    "lon": -122.5378,
+    "station": {
+      "source": "noaa",
+      "id": "PUG1628",
+      "bin": 13,
+      "depthFeet": 10
+    },
+    "stationName": "Skagit Bay channel, SW of Hope Island",
+    "floodDirectionDegrees": 345,
+    "maxKnots": 2.6
+  },
+  {
+    "id": "active-pass",
+    "name": "Active Pass",
+    "lat": 48.8664,
+    "lon": -123.2894,
+    "station": {
+      "source": "chs",
+      "id": "63aef09f84e5432cd3b6c509"
+    },
+    "stationName": "Active Pass",
+    "floodDirectionDegrees": 45,
+    "maxKnots": 5.2
+  },
+  {
+    "id": "porlier-pass",
+    "name": "Porlier Pass",
+    "lat": 49.0113,
+    "lon": -123.5859,
+    "station": {
+      "source": "chs",
+      "id": "63aef0ed84e5432cd3b6c50b"
+    },
+    "stationName": "Porlier Pass",
+    "floodDirectionDegrees": 29,
+    "maxKnots": 7.7
+  },
+  {
+    "id": "gabriola-passage",
+    "name": "Gabriola Passage",
+    "lat": 49.1291,
+    "lon": -123.7043,
+    "station": {
+      "source": "chs",
+      "id": "63aef12e84e5432cd3b6db8d"
+    },
+    "stationName": "Gabriola Passage",
+    "floodDirectionDegrees": 79,
+    "maxKnots": 6.6
+  },
+  {
+    "id": "dodd-narrows",
+    "name": "Dodd Narrows",
+    "lat": 49.1319,
+    "lon": -123.8083,
+    "station": {
+      "source": "chs",
+      "id": "63aef1866a2b9417c035030f"
+    },
+    "stationName": "Dodd Narrows",
+    "floodDirectionDegrees": 355,
+    "maxKnots": 7.7
+  },
+  {
+    "id": "race-passage",
+    "name": "Race Passage",
+    "lat": 48.3067,
+    "lon": -123.5367,
+    "aliases": [
+      "Race Rocks"
+    ],
+    "station": {
+      "source": "chs",
+      "id": "63aeee896a2b9417c034d337"
+    },
+    "stationName": "Race Passage",
+    "floodDirectionDegrees": 46,
+    "maxKnots": 5.2
+  },
+  {
+    "id": "first-narrows",
+    "name": "First Narrows",
+    "lat": 49.316,
+    "lon": -123.1401,
+    "aliases": [
+      "Lions Gate"
+    ],
+    "station": {
+      "source": "chs",
+      "id": "5dd30650e0fdc4b9b4be6d24"
+    },
+    "stationName": "First Narrows        ",
+    "floodDirectionDegrees": 135,
+    "maxKnots": 4.5
+  },
+  {
+    "id": "second-narrows",
+    "name": "Second Narrows",
+    "lat": 49.2947,
+    "lon": -123.0245,
+    "station": {
+      "source": "chs",
+      "id": "5dd30650e0fdc4b9b4be6c2d"
+    },
+    "stationName": "Second Narrows",
+    "floodDirectionDegrees": 87,
+    "maxKnots": 5
+  },
+  {
+    "id": "sechelt-rapids",
+    "name": "Sechelt Rapids",
+    "lat": 49.7383,
+    "lon": -123.8983,
+    "aliases": [
+      "Skookumchuck Narrows",
+      "Skookumchuck"
+    ],
+    "station": {
+      "source": "chs",
+      "id": "63aef40a6a2b9417c0350313"
+    },
+    "stationName": "Sechelt Rapids",
+    "floodDirectionDegrees": 135,
+    "maxKnots": 14
+  },
+  {
+    "id": "beazley-passage",
+    "name": "Beazley Passage",
+    "lat": 50.2263,
+    "lon": -125.142,
+    "aliases": [
+      "Surge Narrows"
+    ],
+    "station": {
+      "source": "chs",
+      "id": "63aefe506a2b9417c0350720"
+    },
+    "stationName": "Beazley Passage",
+    "floodDirectionDegrees": 120,
+    "maxKnots": 9.8
+  },
+  {
+    "id": "hole-in-the-wall",
+    "name": "Hole in the Wall",
+    "lat": 50.3001,
+    "lon": -125.2083,
+    "station": {
+      "source": "chs",
+      "id": "63aefcb26a2b9417c035071e"
+    },
+    "stationName": "Hole in the Wall",
+    "floodDirectionDegrees": 40,
+    "maxKnots": 10
+  },
+  {
+    "id": "gillard-passage",
+    "name": "Gillard Passage",
+    "lat": 50.3933,
+    "lon": -125.1567,
+    "aliases": [
+      "Gillard",
+      "Yuculta Rapids"
+    ],
+    "station": {
+      "source": "chs",
+      "id": "5dd3064fe0fdc4b9b4be6978"
+    },
+    "stationName": "Gillard Passage               ",
+    "floodDirectionDegrees": 95,
+    "maxKnots": 9.9
+  },
+  {
+    "id": "dent-rapids",
+    "name": "Dent Rapids",
+    "lat": 50.41,
+    "lon": -125.2117,
+    "station": {
+      "source": "chs",
+      "id": "63af06d56a2b9417c0353451"
+    },
+    "stationName": "Dent Rapids",
+    "floodDirectionDegrees": 139,
+    "maxKnots": 8.6
+  },
+  {
+    "id": "arran-rapids",
+    "name": "Arran Rapids",
+    "lat": 50.42,
+    "lon": -125.14,
+    "station": {
+      "source": "chs",
+      "id": "63aeff5884e5432cd3b71283"
+    },
+    "stationName": "Arran Rapids",
+    "floodDirectionDegrees": 59,
+    "maxKnots": 11.3
+  },
+  {
+    "id": "seymour-narrows",
+    "name": "Seymour Narrows",
+    "lat": 50.1333,
+    "lon": -125.35,
+    "aliases": [
+      "Discovery Passage"
+    ],
+    "station": {
+      "source": "chs",
+      "id": "63aefc7784e5432cd3b6eb1e"
+    },
+    "stationName": "Seymour Narrows",
+    "floodDirectionDegrees": 180,
+    "maxKnots": 13.5
+  },
+  {
+    "id": "johnstone-strait",
+    "name": "Johnstone Strait",
+    "lat": 50.4717,
+    "lon": -126.1367,
+    "station": {
+      "source": "chs",
+      "id": "63aeffc384e5432cd3b71285"
+    },
+    "stationName": "Johnstone Strait - Central",
+    "floodDirectionDegrees": 102,
+    "maxKnots": 1.3
+  },
+  {
+    "id": "blackney-passage",
+    "name": "Blackney Passage",
+    "lat": 50.555,
+    "lon": -126.6842,
+    "station": {
+      "source": "chs",
+      "id": "63af00086a2b9417c0353154"
+    },
+    "stationName": "Blackney passage",
+    "floodDirectionDegrees": 176,
+    "maxKnots": 3.6
+  },
+  {
+    "id": "weynton-passage",
+    "name": "Weynton Passage",
+    "lat": 50.6033,
+    "lon": -126.8117,
+    "station": {
+      "source": "chs",
+      "id": "63af005f6a2b9417c0353158"
+    },
+    "stationName": "Weynton Passage",
+    "floodDirectionDegrees": 212,
+    "maxKnots": 5.2
+  },
+  {
+    "id": "nakwakto-rapids",
+    "name": "Nakwakto Rapids",
+    "lat": 51.0967,
+    "lon": -127.5033,
+    "station": {
+      "source": "chs",
+      "id": "63af009f84e5432cd3b71287"
+    },
+    "stationName": "Nakwakto Rapids",
+    "floodDirectionDegrees": 354,
+    "maxKnots": 12.4
+  },
+  {
+    "id": "quatsino-narrows",
+    "name": "Quatsino Narrows",
+    "lat": 50.555,
+    "lon": -127.555,
+    "station": {
+      "source": "chs",
+      "id": "63af011e84e5432cd3b71289"
+    },
+    "stationName": "Quatsino Narrows",
+    "floodDirectionDegrees": 9,
+    "maxKnots": 7.5
+  }
+]

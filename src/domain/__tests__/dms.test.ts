@@ -20,3 +20,21 @@ describe("parseDms", () => {
     expect(() => parseDms("not a coordinate")).toThrow();
   });
 });
+
+describe("malformed source headers", () => {
+  it("rejects minutes of 60 or more rather than rolling them into degrees", () => {
+    // nwcruising.net's Wollochet Bay page reads 123° 122' 33.85" W.
+    // Silently accepting it moved the harbour ~100nm into the Pacific.
+    expect(() => parseDms('47° 17\' 20.38" N, 123° 122\' 33.85" W')).toThrow(/under 60/);
+  });
+
+  it("rejects seconds of 60 or more", () => {
+    expect(() => parseDms('47° 17\' 90.00" N, 122° 33\' 33.85" W')).toThrow(/under 60/);
+  });
+
+  it("still accepts a well-formed header", () => {
+    const parsed = parseDms('47° 40\' 39.15" N, 122° 24\' 40.19" W');
+    expect(parsed.lat).toBeCloseTo(47.6775, 4);
+    expect(parsed.lon).toBeCloseTo(-122.4112, 4);
+  });
+});
