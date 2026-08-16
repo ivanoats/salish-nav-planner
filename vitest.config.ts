@@ -17,6 +17,27 @@ export default defineConfig({
     globals: true,
     coverage: {
       provider: "v8",
+      reporter: ["text", "lcov"],
+      reportsDirectory: "./coverage",
+      include: [
+        "src/domain/**/*.ts",
+        "src/application/**/*.ts",
+        // src/adapters/ is excluded — Next.js server glue and in-memory
+        // repositories are covered by integration/e2e tests, not unit tests.
+      ],
+      exclude: [
+        "src/**/*.test.ts",
+        "src/**/*.test.tsx",
+        "src/**/ports/**",
+        "src/domain/location.ts",
+        "src/domain/route.ts",
+      ],
+      thresholds: {
+        statements: 80,
+        branches: 80,
+        functions: 80,
+        lines: 80,
+      },
     },
   },
 });
