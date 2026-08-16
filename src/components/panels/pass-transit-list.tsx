@@ -87,8 +87,10 @@ export function PassTransitList({ passes, loading }: PassTransitListProps) {
             ) : (
               <div className={css({ display: "flex", flexWrap: "wrap", gap: "1" })}>
                 <span className={VERDICT_TEXT[advice.verdict]}>
-                  {Math.abs(advice.signedKnots).toFixed(1)} kt{" "}
-                  {advice.signedKnots >= 0 ? "flood" : "ebb"} · {VERDICT_LABEL[advice.verdict]}
+                  {advice.signedKnots === 0
+                    ? "slack"
+                    : `${Math.abs(advice.signedKnots).toFixed(1)} kt ${advice.signedKnots > 0 ? "flood" : "ebb"}`}{" "}
+                  · {VERDICT_LABEL[advice.verdict]}
                   {advice.setsWithYou === false && advice.verdict !== "dangerous"
                     ? " against you"
                     : ""}

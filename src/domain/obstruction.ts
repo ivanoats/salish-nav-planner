@@ -46,7 +46,9 @@ export const MAX_MAST_HEIGHT_FEET = 200;
 export const AIR_DRAFT_MARGIN_FEET = 5;
 
 export const clampMastHeight = (feet: number): number =>
-  Math.min(MAX_MAST_HEIGHT_FEET, Math.max(MIN_MAST_HEIGHT_FEET, feet));
+  Number.isFinite(feet)
+    ? Math.min(MAX_MAST_HEIGHT_FEET, Math.max(MIN_MAST_HEIGHT_FEET, feet))
+    : MIN_MAST_HEIGHT_FEET;
 
 /** Height that actually has to fit, including the margin above. */
 export const airDraftFor = (mastHeightFeet: number): number =>
