@@ -2,7 +2,11 @@
 
 import { css } from "styled-system/css";
 import { LocationPicker } from "./location-picker";
+import { WindSummary } from "./wind-badge";
+import { formatDayLabel } from "@/domain/calendar";
 import { nmToHrMin } from "@/domain/hr-min";
+import { isTransitConcerning } from "@/domain/tidal";
+import type { DayConditions } from "@/application/day-conditions";
 import type { Location } from "@/domain/location";
 import type { TripDay } from "@/domain/trip";
 
@@ -10,6 +14,7 @@ interface DayItineraryProps {
   readonly tripDays: readonly TripDay[];
   readonly locations: readonly Location[];
   readonly locationsBySlug: ReadonlyMap<string, Location>;
+  readonly dayConditions: readonly DayConditions[];
   readonly minNm: number;
   readonly maxNm: number;
   readonly speedKnots: number;
@@ -34,10 +39,21 @@ const smallButton = css({
   _hover: { backgroundColor: "colorPalette.3" },
 });
 
+/**
+ * The passes on this day that would be met against a foul or dangerous
+ * current — worth surfacing up here, since the fix is usually to pick a
+ * different stop rather than to sail it anyway.
+ */
+const concerningPassNames = (conditions: DayConditions | undefined): readonly string[] =>
+  (conditions?.passes ?? [])
+    .filter(({ advice }) => advice !== null && isTransitConcerning(advice.verdict))
+    .map(({ transit }) => transit.pass.name);
+
 export function DayItinerary({
   tripDays,
   locations,
   locationsBySlug,
+  dayConditions,
   minNm,
   maxNm,
   speedKnots,
@@ -51,11 +67,15 @@ export function DayItinerary({
   const laterDays = tripDays.filter((day) => day.dayNumber > 1);
   if (laterDays.length === 0) return null;
 
+  const conditionsByDay = new Map(dayConditions.map((day) => [day.dayNumber, day] as const));
+
   return (
     <div className={css({ display: "flex", flexDirection: "column", gap: "3" })}>
       {laterDays.map((day) => {
         const nm = day.route?.totalNm ?? null;
         const outOfRange = nm !== null && (nm < minNm || nm > maxNm);
+        const conditions = conditionsByDay.get(day.dayNumber);
+        const concerning = concerningPassNames(conditions);
 
         return (
           <div
@@ -79,11 +99,27 @@ export function DayItinerary({
             >
               <span className={css({ fontSize: "sm", fontWeight: "semibold" })}>
                 Day {day.dayNumber}
+                {conditions === undefined ? null : (
+                  <span
+                    className={css({ fontWeight: "normal", color: "fg.muted", fontSize: "xs" })}
+                  >
+                    {" "}
+                    {formatDayLabel(conditions.date)}
+                  </span>
+                )}
               </span>
               <span className={css({ fontSize: "xs", color: "fg.muted" })}>
                 from {nameOf(locationsBySlug, day.fromSlug)}
               </span>
             </div>
+
+            {conditions?.wind != null ? <WindSummary wind={conditions.wind} /> : null}
+
+            {concerning.length > 0 ? (
+              <div className={css({ fontSize: "xs", color: "amber.11" })}>
+                Foul current at {concerning.join(", ")} — see the timings below.
+              </div>
+            ) : null}
 
             {day.toSlug === null ? (
               <p className={css({ fontSize: "sm", color: "fg.muted" })}>

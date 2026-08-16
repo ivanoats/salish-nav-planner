@@ -21,11 +21,35 @@ Controls:
   can optionally name an **End at** port to finish somewhere else
   (deliver the boat to Anacortes), or leave that blank to wander one-way
   with no return obligation.
+- **Mast (ft)** — height above the water. Five feet is added for
+  masthead gear, and hops under fixed spans that don't clear are removed
+  from the graph, so the planner routes *around* them: at 45 ft Port
+  Ludlow to Port Townsend runs 12.9 nm through the Port Townsend Canal,
+  and at 60 ft it becomes 35.1 nm around Marrowstone Island. Opening
+  bridges never block a route — they're a radio call and a wait — so
+  they're reported rather than avoided. See
+  [Bridges and air draft](#bridges-and-air-draft).
+- **Start date** and **Depart** — when the trip begins and what time you
+  get underway each day. Together they turn the plan from a sequence of
+  hops into dated, clock-timed days, which is what makes a weather
+  forecast and a slack-water table mean anything.
+- **Let the forecast shape the plan** — when on, wind is a ranking term
+  alongside day length and return shape, so a day that means a long beat
+  into a blow loses out to a shorter or more sheltered one. Turn it off
+  to see the forecast without letting it move your stops. It disables
+  itself past the ~16-day forecast horizon, where planning falls back to
+  distance alone.
 - Each day after the first can be re-rolled (**Next** cycles through the
   other candidates) or pinned to a specific stop; pinning a day resets
   the auto-picked days after it, since they were chosen relative to a
   different upstream stop. A pinned stop outside your day-length window
   is honored but flagged.
+
+Each planned day shows the day's wind (direction, sustained and gust
+speed, Beaufort force, and your point of sail on that heading), plus
+every tidal pass on the route with your **estimated arrival time**, the
+predicted current at that moment, and the next slack — so a pass reads
+as an appointment rather than a distance.
 
 Routing data is scraped from [nwcruising.net](https://www.nwcruising.net)'s
 ~220 harbor/marina/point pages, each listing distances, times, and
@@ -80,7 +104,75 @@ npm run test         # vitest run
 npm run test:watch  # vitest watch mode
 npm run lint         # eslint
 npm run scrape       # re-run the nwcruising.net crawler
+npm run build:passes # rebuild public/data/passes.json from NOAA + CHS
 ```
+
+## Weather and tides
+
+Two live sources, both free and keyless, both proxied through
+`src/app/api/` route handlers so the upstream responses are cached once
+for everyone rather than once per visitor:
+
+- **Wind** — [Open-Meteo](https://open-meteo.com), fetched for the
+  ~16 marine zones in `public/data/wind-zones.json` rather than per
+  stop. A synoptic wind over the Salish Sea is coherent across tens of
+  miles and the model's grid is coarser than the gap between
+  neighbouring harbours, so per-harbour forecasts would be slower and
+  falsely precise. Zones also mean the forecast depends only on the
+  *dates*, not on the plan — which is what lets it feed back into route
+  ranking without the plan and the weather waiting on each other.
+- **Currents** — NOAA
+  [Tides & Currents](https://tidesandcurrents.noaa.gov) for US passes,
+  and the Canadian Hydrographic Service's
+  [IWLS](https://api-iwls.dfo-mpo.gc.ca) for Canadian ones. The border
+  is a fact about data publishers, not about the water: Active Pass,
+  Dodd Narrows, Porlier, Gabriola and Seymour Narrows simply aren't in
+  NOAA's tables, and they're the passes that most reward getting right.
+  `src/adapters/outbound/regional-current-predictions.ts` routes each
+  pass to its agency.
+
+Both agencies publish the same shape of data — slack and maximum
+current — so that's the interchange format. `src/domain/tidal.ts`
+interpolates between those turning points with a half-cosine, the smooth
+form of the "rule of thirds" every cruising guide prints, to get a real
+current at your estimated arrival rather than leaving you to eyeball
+where you fall between two table rows.
+
+Currents are astronomical and predictable years ahead; wind is not.
+Anything past the forecast horizon gets no wind at all, and both the
+planner and the UI say so rather than assuming calm.
+
+## Bridges and air draft
+
+`public/data/obstructions.json` is a hand-curated list of spans with
+their clearance and whether they open. Each hop in the routing graph is
+annotated once, at load, with the bridges it goes under, so changing the
+mast height re-filters the graph rather than re-measuring it (13 ms for
+all 4,104 hops).
+
+Working out *which* bridges a hop passes under is the hard part, because
+the source data is point-to-point distances with no route geometry. Two
+signals are combined:
+
+1. **The route table naming it.** nwcruising.net lists "Port Townsend
+   Canal" as a via note on 39 hops. That's as direct as this dataset
+   gets, and it's trusted outright.
+2. **Geometry, checked against the mileage.** Proximity to the drawn
+   track alone gives false positives — the straight line from Everett to
+   Port Angeles sweeps right past the Port Townsend Canal while actually
+   rounding Point Wilson miles away. So a bridge only counts if the
+   published distance *agrees* it's on the way: passing through costs at
+   least the two great-circle legs either side of it, which bounds the
+   ratio from below, and a hop far longer than that went round instead.
+   Port Ludlow to Port Townsend sits at 1.11 and is a real canal
+   transit; Port Hadlock to Port Townsend at 0.85 runs up the bay, and
+   Port Townsend to Poulsbo at 1.62 takes the long way via Agate Passage.
+
+The failure mode is deliberately the safe one. An over-eager match makes
+a route longer, never impossible — every one of the 220 locations stays
+reachable at any mast height, they just cost more miles. **Verify
+clearances against current charts before you rely on one**; these are
+nominal figures at mean high water, and the app is a planning aid.
 
 ## Data
 
@@ -120,7 +212,54 @@ output (`public/data/*.geojson`, `public/data/edges.json`, and the raw
 HTML cache in `data/raw/`) is gitignored — regenerate it locally with
 `npm run scrape` rather than expecting it in a fresh checkout.
 `public/data/waypoints.json` (hand-authored, not scraped) is the one
-data file that is committed.
+scraper-adjacent data file that is committed.
+
+`public/data/passes.json` and `public/data/wind-zones.json` are also
+committed, on the same reasoning that keeps the scrape out. The zones are
+hand-authored outright. The passes start from a hand-written list in
+`scripts/build-passes.ts` — which channels actually run hard enough to
+plan around, since plenty are named on a chart without carrying much
+current — and `npm run build:passes` fills in the mechanical part from
+the agencies: which depth bin to read, which way the flood sets, and how
+hard each pass runs at springs. That output is US and Canadian
+government open data (NOAA's is public domain, CHS's under the Open
+Government Licence – Canada), so unlike the scrape it's ours to
+redistribute. Re-run the script when you add a pass; there's no need to
+run it to get a working checkout. `public/data/obstructions.json` is
+hand-authored and committed for the same reason.
+
+### Bad coordinates upstream
+
+A few nwcruising.net pages carry coordinate headers that are simply
+wrong, and a wrong position is worse than a missing one: it drags the
+map line across the chart and puts the stop in the wrong weather zone.
+Three were found by checking every edge's straight-line distance against
+its published mileage — the great circle can never be longer than the
+distance by water, so a big excess means an endpoint is misplaced:
+
+- **Wollochet Bay** reads `123° 122' 33.85" W`. Minutes can't exceed 59,
+  and the stray value silently became two extra degrees, putting the
+  harbour ~100 nm out in the Pacific.
+- **Mud Bay, Lopez Island** reads `47° 27' N` — that's Mud Bay in Eld
+  Inlet near Olympia, about 70 nm from the Lopez bay the page is about.
+- **Sandy Hook, Cultus Bay** reads a position out in mid-Sound off
+  Kingston rather than on south Whidbey.
+
+`parseDms` now rejects out-of-range minutes and seconds rather than
+folding them into degrees, and the corrections live in
+`public/data/location-fixes.json` — committed, each with the evidence
+for it, and applied by `loadDataset`. They're kept there rather than
+edited into the scraper's output, which the next crawl would overwrite.
+
+The same check flags a handful of edges whose *published distance* looks
+impossible — Bremerton to Desolation Sound is listed at 128.1 nm against
+a 173.9 nm straight line, which no boat can do. Those are a different
+class of error (a bad table row rather than a bad position) and are
+currently left in the graph, where they act as shortcuts the planner will
+happily take. Filtering edges whose published distance falls below the
+great-circle distance between their endpoints would fix it; it isn't done
+yet because the same check would drop legitimate edges wherever a
+coordinate is still wrong.
 
 ## Optional: real chart tiles
 

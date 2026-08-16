@@ -15,6 +15,11 @@ export interface RouteLeg {
   readonly nm: number;
   readonly hrMin: string;
   readonly via: readonly string[];
+  /**
+   * Ids of bridges this hop goes under. Empty when the graph was built
+   * without obstruction geometry.
+   */
+  readonly obstructionIds?: readonly string[];
 }
 
 export interface PlannedRoute {

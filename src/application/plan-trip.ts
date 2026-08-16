@@ -5,8 +5,24 @@ import {
   type DestinationCandidate,
   type ReturnLegContext,
   type RouteGraph,
+  type WindRankingContext,
 } from "./route-graph";
+import { dateForDay, type IsoDate } from "@/domain/calendar";
 import { idealDistanceToEnd, RETURN_SHAPE_WEIGHT, type DayLengthRange, type TripDay } from "@/domain/trip";
+import type { Coordinates } from "@/domain/location";
+import type { WindField } from "@/domain/wind-field";
+
+/**
+ * Everything the planner needs to let weather shape the trip. Optional
+ * throughout: without it the plan is the same distance-only plan it has
+ * always been, which is what a trip beyond the forecast horizon gets.
+ */
+export interface WeatherContext {
+  readonly startDate: IsoDate;
+  readonly windField: WindField;
+  readonly coordinatesBySlug: ReadonlyMap<string, Coordinates>;
+  readonly weight: number;
+}
 
 export interface PlanTripInput {
   readonly graph: RouteGraph;
@@ -26,7 +42,41 @@ export interface PlanTripInput {
    * A day absent from this map gets an auto-picked destination.
    */
   readonly overrides: ReadonlyMap<number, string>;
+  /** Omit to plan on distance alone. */
+  readonly weather?: WeatherContext;
+  /**
+   * Mast height above the water, in feet. Given it, hops under fixed
+   * spans the rig won't clear are dropped from the graph entirely, so
+   * the planner routes around them rather than proposing a day that
+   * ends at a bridge.
+   */
+  readonly mastHeightFeet?: number;
 }
+
+/**
+ * The wind shaping for one day, anchored at the stop it departs from.
+ * Each day gets its own date, so a week-long trip is ranked against the
+ * weather it will actually meet rather than against today's.
+ */
+const windContextFor = (
+  weather: WeatherContext | undefined,
+  dayNumber: number,
+  fromSlug: string
+): WindRankingContext | undefined => {
+  if (weather === undefined) return undefined;
+
+  const originCoordinates = weather.coordinatesBySlug.get(fromSlug);
+  if (originCoordinates === undefined) return undefined;
+
+  const date = dateForDay(weather.startDate, dayNumber);
+
+  return {
+    originCoordinates,
+    coordinatesBySlug: weather.coordinatesBySlug,
+    windAt: (point) => weather.windField.windAt(point, date),
+    weight: weather.weight,
+  };
+};
 
 /**
  * Distances from every location to the trip's end point. The graph is
@@ -35,9 +85,10 @@ export interface PlanTripInput {
  */
 const distancesToEndPoint = (
   graph: RouteGraph,
-  endSlug: string | null
+  endSlug: string | null,
+  mastHeightFeet: number | undefined
 ): ReadonlyMap<string, number> | null =>
-  endSlug === null ? null : shortestDistancesFrom(graph, endSlug);
+  endSlug === null ? null : shortestDistancesFrom(graph, endSlug, mastHeightFeet);
 
 const returnContextFor = (
   distancesToEnd: ReadonlyMap<string, number> | null,
@@ -94,10 +145,12 @@ export const planTrip = ({
   days,
   range,
   overrides,
+  weather,
+  mastHeightFeet,
 }: PlanTripInput): TripDay[] => {
   const result: TripDay[] = [];
   const visited = new Set<string>([startSlug]);
-  const distancesToEnd = distancesToEndPoint(graph, endSlug);
+  const distancesToEnd = distancesToEndPoint(graph, endSlug, mastHeightFeet);
   let current = startSlug;
 
   for (let dayNumber = 1; dayNumber <= days; dayNumber++) {
@@ -123,11 +176,13 @@ export const planTrip = ({
           range,
           exclude: exclusionsFor(visited, endSlug),
           returnLeg: returnContextFor(distancesToEnd, dayNumber, days, range),
+          wind: windContextFor(weather, dayNumber, current),
+          mastHeightFeet,
         })[0]?.slug ?? null;
       source = "auto";
     }
 
-    const route = toSlug === null ? null : findRoute(graph, current, toSlug);
+    const route = toSlug === null ? null : findRoute(graph, current, toSlug, mastHeightFeet);
     result.push({ dayNumber, fromSlug: current, toSlug, source, route });
 
     if (toSlug === null) {
@@ -176,10 +231,12 @@ export const candidatesForDay = (
     range: input.range,
     exclude: exclusionsFor(visited, input.endSlug),
     returnLeg: returnContextFor(
-      distancesToEndPoint(input.graph, input.endSlug),
+      distancesToEndPoint(input.graph, input.endSlug, input.mastHeightFeet),
       dayNumber,
       input.days,
       input.range
     ),
+    wind: windContextFor(input.weather, dayNumber, day.fromSlug),
+    mastHeightFeet: input.mastHeightFeet,
   });
 };

@@ -1,0 +1,18 @@
+[
+  { "id": "south-sound", "name": "South Puget Sound", "lat": 47.16, "lon": -122.72 },
+  { "id": "central-sound", "name": "Central Puget Sound", "lat": 47.58, "lon": -122.45 },
+  { "id": "north-sound", "name": "Northern Puget Sound", "lat": 47.95, "lon": -122.45 },
+  { "id": "hood-canal", "name": "Hood Canal", "lat": 47.55, "lon": -122.92 },
+  { "id": "admiralty", "name": "Admiralty Inlet", "lat": 48.15, "lon": -122.72 },
+  { "id": "juan-de-fuca-east", "name": "East Strait of Juan de Fuca", "lat": 48.22, "lon": -123.1 },
+  { "id": "juan-de-fuca-west", "name": "West Strait of Juan de Fuca", "lat": 48.33, "lon": -124.15 },
+  { "id": "san-juans", "name": "San Juan Islands", "lat": 48.6, "lon": -122.95 },
+  { "id": "bellingham", "name": "Bellingham Bay and Rosario", "lat": 48.65, "lon": -122.65 },
+  { "id": "haro-gulf", "name": "Haro Strait and southern Gulf Islands", "lat": 48.75, "lon": -123.25 },
+  { "id": "georgia-south", "name": "Southern Strait of Georgia", "lat": 49.1, "lon": -123.5 },
+  { "id": "georgia-north", "name": "Northern Strait of Georgia", "lat": 49.65, "lon": -124.55 },
+  { "id": "desolation", "name": "Desolation Sound", "lat": 50.15, "lon": -124.75 },
+  { "id": "discovery", "name": "Discovery Passage and the rapids", "lat": 50.3, "lon": -125.25 },
+  { "id": "johnstone", "name": "Johnstone Strait", "lat": 50.5, "lon": -126.2 },
+  { "id": "queen-charlotte", "name": "Queen Charlotte Strait", "lat": 50.75, "lon": -127.15 }
+]

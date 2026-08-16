@@ -16,7 +16,8 @@
     "typecheck": "panda codegen --silent && tsc --noEmit",
     "test": "vitest run",
     "test:watch": "vitest",
-    "scrape": "tsx scripts/scrape-nwcruising.ts"
+    "scrape": "tsx scripts/scrape-nwcruising.ts",
+    "build:passes": "tsx scripts/build-passes.ts"
   },
   "dependencies": {
     "@ark-ui/react": "^5.38.1",
