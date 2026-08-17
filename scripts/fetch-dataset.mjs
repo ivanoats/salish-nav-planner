@@ -124,7 +124,22 @@ const fetchOne = async (source, { name, looksRight, describe }) => {
 
   const response = await source.get(url);
   if (!response.ok) {
-    throw new Error(`${name} came back ${response.status} ${response.statusText} from ${source.label}`);
+    // S3-compatible stores explain themselves in the body — "InvalidAccessKeyId"
+    // and "SignatureDoesNotMatch" are different mistakes with the same 400, and
+    // the status line alone sends you looking in the wrong place. Only the code
+    // and message are surfaced; neither carries anything secret.
+    const detail = await response.text().then(
+      (body) => {
+        const code = body.match(/<Code>([^<]+)<\/Code>/)?.[1];
+        const message = body.match(/<Message>([^<]+)<\/Message>/)?.[1];
+        if (code) return ` — ${code}${message ? `: ${message}` : ""}`;
+        return body.trim() === "" ? "" : ` — ${body.trim().slice(0, 200)}`;
+      },
+      () => ""
+    );
+    throw new Error(
+      `${name} came back ${response.status} ${response.statusText} from ${source.label}${detail}`
+    );
   }
 
   const text = await response.text();
