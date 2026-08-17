@@ -101,6 +101,7 @@ npm run dev         # stage maplibre worker + panda codegen + next dev
 npm run build       # stage maplibre worker + panda codegen + next build
 npm run typecheck   # panda codegen + tsc --noEmit
 npm run test         # vitest run
+npm run test:coverage # vitest run --coverage
 npm run test:watch  # vitest watch mode
 npm run lint         # eslint
 npm run scrape       # re-run the nwcruising.net crawler

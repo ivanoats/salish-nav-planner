@@ -19,13 +19,17 @@ import { buildRouteLineCoordinates } from "@/domain/route-line";
 import type { Location, Waypoint } from "@/domain/location";
 import type { PlannedRoute } from "@/domain/route";
 
-const SALISH_SEA_CENTER: [number, number] = [-123.1, 48.3];
-const SALISH_SEA_ZOOM = 7;
-
-const ROUTE_SOURCE_ID = "planned-route";
-const START_MARKER_COLOR = "#16a34a";
-const DEST_MARKER_COLOR = "#dc2626";
-const STOPOVER_MARKER_COLOR = "#d97706";
+import {
+  SALISH_SEA_CENTER,
+  SALISH_SEA_ZOOM,
+  ROUTE_SOURCE_ID,
+  START_MARKER_COLOR,
+  DEST_MARKER_COLOR,
+  STOPOVER_MARKER_COLOR,
+  FIT_BOUNDS_PADDING,
+  FIT_BOUNDS_MAX_ZOOM,
+  FIT_BOUNDS_DURATION,
+} from "./map-constants";
 
 interface MapProps {
   readonly locations: readonly Location[];
@@ -147,7 +151,7 @@ export function MapView({
 
     const map = new MapLibreMap({
       container: containerRef.current,
-      center: SALISH_SEA_CENTER,
+      center: [SALISH_SEA_CENTER[0], SALISH_SEA_CENTER[1]],
       zoom: SALISH_SEA_ZOOM,
       style: { version: 8, sources, layers },
     });
@@ -238,7 +242,7 @@ export function MapView({
         (b, coord) => b.extend(coord),
         new LngLatBounds(first, first)
       );
-      map.fitBounds(bounds, { padding: 64, maxZoom: 12, duration: 500 });
+      map.fitBounds(bounds, { padding: FIT_BOUNDS_PADDING, maxZoom: FIT_BOUNDS_MAX_ZOOM, duration: FIT_BOUNDS_DURATION });
     }
   }, [routes, locations, waypoints, styleLoaded]);
 
