@@ -97,13 +97,40 @@ planner. Without the generated files, the app still builds but has no routes
 
 [`netlify.toml`](netlify.toml) configures Netlify to use Node.js 24, run the
 standard npm build, and deploy Next.js through Netlify's automatically managed
-OpenNext adapter. There are no required environment variables.
+OpenNext adapter.
+
+### Getting route data into a deploy
+
+`edges.json` and `locations.geojson` are gitignored, so a Git-based build
+checks out a repo with no routes in it. The home page is prerendered and
+reads them, so without something in place the site deploys looking
+perfectly functional with an **empty destination picker** — which is
+exactly what happened once.
+
+`npm run build` therefore runs `npm run dataset` first
+([`scripts/fetch-dataset.mjs`](scripts/fetch-dataset.mjs)), which pulls both
+files from wherever you host them:
+
+| Variable | Required | Purpose |
+| --- | --- | --- |
+| `DATASET_BASE_URL` | for deploys | Base URL serving `edges.json` and `locations.geojson`. Netlify Blobs, S3, a private gist — anything over HTTPS. |
+| `DATASET_AUTH_TOKEN` | optional | Sent as `Authorization: Bearer …` if the store is private. |
+| `ALLOW_EMPTY_DATASET` | CI only | Set to `1` to permit a build with no route data. |
+
+Unset `DATASET_BASE_URL` and the script does nothing, which is what a local
+checkout wants — `npm run scrape` has already put the real files there.
+
+Hosting the files this way keeps them out of a public repo, so it does not
+redistribute nwcruising.net's data any more than a local scrape does. **Do
+not** add `npm run scrape` to the hosted build: that crawls their site on
+every deploy, which is a different thing from an occasional local refresh.
+
+A missing dataset now **fails the build** rather than shipping an empty
+planner. CI is the one exception — it has no scrape and only needs to know
+the app compiles, so its build step sets `ALLOW_EMPTY_DATASET=1`.
 
 `NEXT_PUBLIC_CHART_PMTILES_URL` is optional and must remain unset on a public
-deployment unless the chart archive's licence permits public hosting. The
-scraped route files are also intentionally absent from Git-based builds because
-redistribution permission has not been obtained; do not add `npm run scrape` to
-the hosted build without permission from the data owner.
+deployment unless the chart archive's licence permits public hosting.
 
 ## Commands
 
@@ -116,6 +143,7 @@ npm run test:coverage # vitest run --coverage
 npm run test:watch  # vitest watch mode
 npm run lint         # eslint
 npm run scrape       # re-run the nwcruising.net crawler
+npm run dataset      # fetch hosted route data (needs DATASET_BASE_URL)
 npm run build:passes # rebuild public/data/passes.json from NOAA + CHS
 ```
 
