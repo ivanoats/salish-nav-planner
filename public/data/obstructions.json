@@ -1,0 +1,138 @@
+[
+  {
+    "id": "port-townsend-canal",
+    "name": "Port Townsend Canal Bridge",
+    "aliases": ["Port Townsend Canal", "Hadlock Bridge"],
+    "lat": 48.0325,
+    "lon": -122.7326,
+    "clearanceFeet": 58,
+    "opens": false,
+    "note": "SR 116 to Indian Island. Fixed span — the shortcut between Port Townsend and Hood Canal is closed to tall rigs, which must go around Marrowstone Island."
+  },
+  {
+    "id": "hood-canal-bridge",
+    "name": "Hood Canal Bridge",
+    "aliases": ["Hood Canal Floating Bridge"],
+    "lat": 47.8589,
+    "lon": -122.6236,
+    "clearanceFeet": 35,
+    "opens": true,
+    "note": "SR 104 floating bridge. The drawspan opens on request to WSDOT on VHF 13; allow time, and note it also opens on a published schedule for submarine transits."
+  },
+  {
+    "id": "deception-pass-bridge",
+    "name": "Deception Pass Bridge",
+    "lat": 48.4064,
+    "lon": -122.6428,
+    "clearanceFeet": 180,
+    "opens": false
+  },
+  {
+    "id": "canoe-pass-bridge",
+    "name": "Canoe Pass Bridge",
+    "lat": 48.4083,
+    "lon": -122.6489,
+    "clearanceFeet": 144,
+    "opens": false
+  },
+  {
+    "id": "agate-pass-bridge",
+    "name": "Agate Pass Bridge",
+    "aliases": ["Agate Passage", "Agate Pass"],
+    "lat": 47.7128,
+    "lon": -122.5464,
+    "clearanceFeet": 75,
+    "opens": false
+  },
+  {
+    "id": "tacoma-narrows-bridge",
+    "name": "Tacoma Narrows Bridges",
+    "aliases": ["Tacoma Narrows", "The Narrows"],
+    "lat": 47.2694,
+    "lon": -122.5517,
+    "clearanceFeet": 187,
+    "opens": false
+  },
+  {
+    "id": "rainbow-bridge",
+    "name": "Rainbow Bridge, La Conner",
+    "aliases": ["Swinomish Channel", "La Conner"],
+    "lat": 48.3919,
+    "lon": -122.4972,
+    "clearanceFeet": 75,
+    "opens": false,
+    "note": "Swinomish Channel at La Conner. The channel's railroad swing bridge just north of it normally sits open."
+  },
+  {
+    "id": "salmon-bay-rr-bridge",
+    "name": "Salmon Bay Railroad Bridge",
+    "aliases": ["Ballard Locks", "Ballard Railroad Bridge"],
+    "lat": 47.6647,
+    "lon": -122.3925,
+    "clearanceFeet": 43,
+    "opens": true,
+    "note": "Bascule just west of the Ballard Locks; normally left up, closes for trains."
+  },
+  {
+    "id": "ballard-bridge",
+    "name": "Ballard Bridge",
+    "lat": 47.6597,
+    "lon": -122.3767,
+    "clearanceFeet": 44,
+    "opens": true,
+    "note": "Lake Washington Ship Canal. Opens on signal outside rush-hour restrictions."
+  },
+  {
+    "id": "fremont-bridge",
+    "name": "Fremont Bridge",
+    "lat": 47.6486,
+    "lon": -122.3497,
+    "clearanceFeet": 30,
+    "opens": true,
+    "note": "The lowest span on the Ship Canal; opens on signal outside rush-hour restrictions."
+  },
+  {
+    "id": "aurora-bridge",
+    "name": "Aurora Bridge",
+    "aliases": ["George Washington Memorial Bridge"],
+    "lat": 47.6486,
+    "lon": -122.3472,
+    "clearanceFeet": 135,
+    "opens": false
+  },
+  {
+    "id": "university-bridge",
+    "name": "University Bridge",
+    "lat": 47.6531,
+    "lon": -122.3206,
+    "clearanceFeet": 42,
+    "opens": true
+  },
+  {
+    "id": "montlake-bridge",
+    "name": "Montlake Bridge",
+    "lat": 47.6469,
+    "lon": -122.3047,
+    "clearanceFeet": 46,
+    "opens": true,
+    "note": "Last bridge before Lake Washington."
+  },
+  {
+    "id": "lions-gate-bridge",
+    "name": "Lions Gate Bridge",
+    "aliases": ["First Narrows"],
+    "lat": 49.3147,
+    "lon": -123.1386,
+    "clearanceFeet": 200,
+    "opens": false
+  },
+  {
+    "id": "ironworkers-bridge",
+    "name": "Ironworkers Memorial Bridge",
+    "aliases": ["Second Narrows"],
+    "lat": 49.2947,
+    "lon": -123.0245,
+    "clearanceFeet": 148,
+    "opens": false
+  }
+]

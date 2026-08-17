@@ -1,0 +1,26 @@
+[
+  {
+    "slug": "wollochet_bay",
+    "name": "Wollochet Bay Outstation",
+    "region": "US",
+    "lat": 47.289,
+    "lon": -122.5594,
+    "reason": "Source page reads 123° 122' 33.85\" W. Minutes cannot exceed 59, and the stray 122 pushes the point ~100 nm into the Pacific. The distance tables (4.2 nm to Narrows Marina, 8.9 nm to Gig Harbor) place it in Wollochet Bay off Hale Passage, so the minutes are read as 33'."
+  },
+  {
+    "slug": "mud_bay",
+    "name": "Mud Bay, Lopez Island",
+    "region": "US",
+    "lat": 48.453,
+    "lon": -122.8406,
+    "reason": "Source page reads 47° 27' N, which is Mud Bay in Eld Inlet near Olympia rather than the Lopez Island bay the page is about. The tables (12 nm to Rosario, 14.1 nm to Friday Harbor) confirm Lopez, so the degrees are read as 48° and the rest of the header is left alone."
+  },
+  {
+    "slug": "sandy_hook",
+    "name": "Sandy Hook, Cultus Bay",
+    "region": "US",
+    "lat": 47.9557,
+    "lon": -122.3936,
+    "reason": "Source page reads 47° 35' N, 122° 30' W, which lands in mid-Sound off Kingston. Sandy Hook is on Cultus Bay at the south end of Whidbey Island; that position matches the tables (6 nm to Point No Point, 11 nm to Everett) where the published one does not."
+  }
+]

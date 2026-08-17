@@ -35,6 +35,11 @@ export const parseDms = (text: string): { lat: number; lon: number } => {
   const toDecimal = (deg: string, min: string, sec: string, hemi: string) => {
     const minutes = Number(min);
     const seconds = Number(sec);
+    // A few nwcruising.net pages carry malformed headers — Wollochet Bay
+    // reads 123° 122' 33.85" W. Left alone, 122 minutes silently becomes
+    // two extra degrees and drops the harbour a hundred miles out into
+    // the Pacific, which is far worse than refusing to read it. See
+    // public/data/location-fixes.json for the corrections.
     if (minutes >= 60 || seconds >= 60) {
       throw new Error(
         `Invalid DMS coordinate (minutes and seconds must be under 60): ${text}`

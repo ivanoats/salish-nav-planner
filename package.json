@@ -18,7 +18,8 @@
     "test": "vitest run",
     "test:coverage": "vitest run --coverage",
     "test:watch": "vitest",
-    "scrape": "tsx scripts/scrape-nwcruising.ts"
+    "scrape": "tsx scripts/scrape-nwcruising.ts",
+    "build:passes": "tsx scripts/build-passes.ts"
   },
   "dependencies": {
     "@ark-ui/react": "^5.38.1",
