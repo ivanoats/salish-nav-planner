@@ -19,4 +19,10 @@ describe("parseDms", () => {
   it("throws on unparseable input", () => {
     expect(() => parseDms("not a coordinate")).toThrow();
   });
+
+  it("throws when minutes or seconds are out of range", () => {
+    expect(() =>
+      parseDms('47° 40\' 39.15" N, 123° 122\' 33.85" W')
+    ).toThrow(/Invalid DMS coordinate component/);
+  });
 });
