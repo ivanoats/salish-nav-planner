@@ -125,6 +125,20 @@ S3-compatible API with a SigV4-signed request:
 Any plain HTTPS store works too, as a fallback: set `DATASET_BASE_URL`
 (plus `DATASET_AUTH_TOKEN` for a bearer header) instead of the R2 group.
 
+On Netlify, mark **only** `R2_ACCESS_KEY_ID` and `R2_SECRET_ACCESS_KEY` as
+secret. Netlify's secret scanning fails any build whose output contains the
+value of a variable marked secret, and `R2_BUCKET` is `salish-nav-planner` —
+which is also the site name and the npm package name, so it appears in
+`package.json` and throughout the build. Marking it secret fails every
+deploy. It isn't a credential anyway: the bucket is private, and access is
+controlled by the key and secret, not by the name being hard to guess. The
+same goes for `R2_ACCOUNT_ID`, which appears in the endpoint hostname.
+
+Note also that `netlify build` run locally cannot read secret values back
+out of the API — it substitutes a 20-character mask — so a local run of it
+will fail signature checks even when the real deploy is fine. Debug against
+a real deploy, or against `.env`.
+
 Configure neither and the script does nothing, which is what a local
 checkout wants — `npm run scrape` has already put the real files there. For
 local testing against R2, put the four variables in a gitignored `.env`;
