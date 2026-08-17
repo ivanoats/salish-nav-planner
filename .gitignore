@@ -55,3 +55,6 @@ styled-system-studio
 /public/data/*.geojson
 /public/data/edges.json
 !/public/data/waypoints.json
+
+# Local Netlify folder
+/.netlify/
