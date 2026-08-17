@@ -125,7 +125,8 @@ Types: `feat`, `fix`, `docs`, `style`, `refactor`, `test`, `chore`, `perf`, `ci`
 ### GitHub Actions
 
 All CI runs on GitHub Actions (`.github/workflows/ci.yml`). Every PR must pass CI
-before merge. Pipeline:
+before merge. The workflow currently defines a single `lint-test-build` job that
+runs these steps sequentially:
 
 1. **lint-markdown** — markdownlint on all `**/*.md`
 2. **lint** — ESLint on app code
@@ -162,4 +163,3 @@ flow decisions, and any reversal of a prior decision.
 - **ESM throughout** — use `import`/`export` in all app code.
 - Legacy scripts (`scripts/*.ts`) may use tsx/CommonJS — do not import them from
   app code.
-
