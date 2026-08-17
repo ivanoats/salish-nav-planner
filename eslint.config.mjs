@@ -12,6 +12,9 @@ const eslintConfig = defineConfig([
     "out/**",
     "build/**",
     "next-env.d.ts",
+    // Generated project artifacts:
+    "public/maplibre/**",
+    "styled-system/**",
   ]),
 ]);
 
