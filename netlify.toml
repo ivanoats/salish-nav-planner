@@ -1,0 +1,8 @@
+[build]
+  command = "npm run build"
+  publish = ".next"
+
+[build.environment]
+  NETLIFY_NEXT_SKEW_PROTECTION = "true"
+  NEXT_TELEMETRY_DISABLED = "1"
+  NODE_VERSION = "24"

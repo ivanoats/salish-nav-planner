@@ -89,10 +89,21 @@ npm run scrape   # crawl nwcruising.net -> public/data/*.json (one-shot, ~2 min)
 npm run dev      # http://localhost:3000
 ```
 
-`npm run scrape` must be run at least once before `npm run dev` /
-`npm run build` — the app reads `public/data/locations.geojson` and
-`public/data/edges.json` at request/build time and there's nothing
-checked into git to fall back on (see [Data](#data)).
+Run `npm run scrape` before `npm run dev` or `npm run build` to populate the
+planner. Without the generated files, the app still builds but has no routes
+(see [Data](#data)).
+
+## Deployment
+
+[`netlify.toml`](netlify.toml) configures Netlify to use Node.js 24, run the
+standard npm build, and deploy Next.js through Netlify's automatically managed
+OpenNext adapter. There are no required environment variables.
+
+`NEXT_PUBLIC_CHART_PMTILES_URL` is optional and must remain unset on a public
+deployment unless the chart archive's licence permits public hosting. The
+scraped route files are also intentionally absent from Git-based builds because
+redistribution permission has not been obtained; do not add `npm run scrape` to
+the hosted build without permission from the data owner.
 
 ## Commands
 
