@@ -65,28 +65,44 @@ const isMissingFile = (error: unknown): boolean =>
   (error as NodeJS.ErrnoException).code === "ENOENT";
 
 /**
- * Reads a scraped file, or returns `fallback` if it hasn't been generated.
+ * Whether a build with no route data at all is acceptable.
  *
- * The scrape output is deliberately gitignored (see the README on
- * nwcruising.net's terms), so a fresh checkout — CI's included — has no
- * `edges.json` or `locations.geojson`. The home page is statically
- * prerendered and reads them at build time, which turned a missing
- * regenerable cache into a hard build failure.
- *
- * Degrading to an empty dataset keeps the build and the page working;
- * the planner then has nowhere to sail to, which the warning explains
- * rather than leaving someone to puzzle over an empty picker.
+ * It is exactly once: in CI, which has no scrape and no business
+ * fetching one, and only wants to know the app compiles. Everywhere else
+ * an empty dataset is a broken deploy — the site once shipped looking
+ * perfectly functional with an empty destination picker, because a
+ * missing file only warned. So this stays opt-in and loud by default.
  */
-const readOptionalJson = async <T>(fileName: string, fallback: T): Promise<T> => {
+const allowsEmptyDataset = (): boolean => process.env.ALLOW_EMPTY_DATASET === "1";
+
+/**
+ * Reads one of the two gitignored scrape outputs.
+ *
+ * Missing means either nobody has run `npm run scrape`, or the deploy
+ * never fetched the hosted copy — see `scripts/fetch-dataset.mjs`. Both
+ * are faults worth stopping for, so this throws unless the build has
+ * explicitly said it can live without the data.
+ */
+const readScrapedJson = async <T>(fileName: string, whenAllowedEmpty: T): Promise<T> => {
   try {
     return await readJson<T>(fileName);
   } catch (error) {
     if (!isMissingFile(error)) throw error;
+
+    if (!allowsEmptyDataset()) {
+      throw new Error(
+        `Route data is missing: public/data/${fileName} does not exist.\n` +
+          `  • Locally, run \`npm run scrape\` to generate it.\n` +
+          `  • On a deploy, set DATASET_BASE_URL so \`npm run dataset\` can fetch it.\n` +
+          `  • To build without route data anyway (CI), set ALLOW_EMPTY_DATASET=1.`
+      );
+    }
+
     console.warn(
-      `[load-dataset] ${fileName} is missing — run \`npm run scrape\` to generate it. ` +
-        `Continuing without it, so the planner will have no routes.`
+      `[load-dataset] ${fileName} is missing and ALLOW_EMPTY_DATASET is set — ` +
+        `continuing with no route data, so the planner will have no destinations.`
     );
-    return fallback;
+    return whenAllowedEmpty;
   }
 };
 
@@ -124,8 +140,8 @@ export const loadDataset = async (): Promise<Dataset> => {
   // a missing one is a broken checkout rather than an ungenerated cache,
   // and should fail loudly.
   const [geojson, edges, waypoints, passes, windZones, obstructions, fixes] = await Promise.all([
-    readOptionalJson<LocationFeatureCollection>("locations.geojson", EMPTY_FEATURES),
-    readOptionalJson<RouteEdge[]>("edges.json", []),
+    readScrapedJson<LocationFeatureCollection>("locations.geojson", EMPTY_FEATURES),
+    readScrapedJson<RouteEdge[]>("edges.json", []),
     readJson<Waypoint[]>("waypoints.json"),
     readJson<TidalPass[]>("passes.json"),
     readJson<WindZone[]>("wind-zones.json"),

@@ -37,4 +37,9 @@ jobs:
         run: npm run test:coverage
 
       - name: Build app
+        # CI has no scrape and no business fetching one — it only needs to
+        # know the app compiles. Everywhere else a missing dataset is a
+        # broken deploy and stops the build.
+        env:
+          ALLOW_EMPTY_DATASET: "1"
         run: npm run build
