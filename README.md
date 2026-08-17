@@ -111,19 +111,41 @@ exactly what happened once.
 ([`scripts/fetch-dataset.mjs`](scripts/fetch-dataset.mjs)), which pulls both
 files from wherever you host them:
 
+The files live in a **private Cloudflare R2 bucket**, read over R2's
+S3-compatible API with a SigV4-signed request:
+
 | Variable | Required | Purpose |
 | --- | --- | --- |
-| `DATASET_BASE_URL` | for deploys | Base URL serving `edges.json` and `locations.geojson`. Netlify Blobs, S3, a private gist — anything over HTTPS. |
-| `DATASET_AUTH_TOKEN` | optional | Sent as `Authorization: Bearer …` if the store is private. |
-| `ALLOW_EMPTY_DATASET` | CI only | Set to `1` to permit a build with no route data. |
+| `R2_ACCOUNT_ID` | for deploys | Cloudflare account ID (the subdomain of the R2 S3 endpoint) |
+| `R2_BUCKET` | for deploys | Bucket name, e.g. `salish-nav-planner` |
+| `R2_ACCESS_KEY_ID` | for deploys | R2 API token, **Object Read only**, scoped to that bucket |
+| `R2_SECRET_ACCESS_KEY` | for deploys | Secret half of the same token |
+| `ALLOW_EMPTY_DATASET` | CI only | Set to `1` to permit a build with no route data |
 
-Unset `DATASET_BASE_URL` and the script does nothing, which is what a local
-checkout wants — `npm run scrape` has already put the real files there.
+Any plain HTTPS store works too, as a fallback: set `DATASET_BASE_URL`
+(plus `DATASET_AUTH_TOKEN` for a bearer header) instead of the R2 group.
 
-Hosting the files this way keeps them out of a public repo, so it does not
-redistribute nwcruising.net's data any more than a local scrape does. **Do
-not** add `npm run scrape` to the hosted build: that crawls their site on
-every deploy, which is a different thing from an occasional local refresh.
+Configure neither and the script does nothing, which is what a local
+checkout wants — `npm run scrape` has already put the real files there. For
+local testing against R2, put the four variables in a gitignored `.env`;
+the script loads it automatically.
+
+**The bucket must stay private.** Enabling its public `r2.dev` URL would
+publish nwcruising.net's tables to anyone who finds the address, which is
+exactly what keeping them out of this repo avoids. Read-only, bucket-scoped
+credentials keep the blast radius small if one leaks. For the same reason,
+do **not** add `npm run scrape` to the hosted build: that crawls their site
+on every deploy, which is a different thing from an occasional local
+refresh.
+
+Refresh the hosted copy after a re-scrape with:
+
+```sh
+wrangler r2 object put salish-nav-planner/edges.json \
+  --file=public/data/edges.json --content-type=application/json --remote
+wrangler r2 object put salish-nav-planner/locations.geojson \
+  --file=public/data/locations.geojson --content-type=application/geo+json --remote
+```
 
 A missing dataset now **fails the build** rather than shipping an empty
 planner. CI is the one exception — it has no scrape and only needs to know
