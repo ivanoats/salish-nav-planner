@@ -23,6 +23,9 @@ describe("parseDms", () => {
   it("throws when minutes or seconds are out of range", () => {
     expect(() =>
       parseDms('47° 40\' 39.15" N, 123° 122\' 33.85" W')
-    ).toThrow(/Invalid DMS coordinate component/);
+    ).toThrow(/minutes and seconds must be under 60/);
+    expect(() =>
+      parseDms('47° 40\' 90.00" N, 123° 22\' 33.85" W')
+    ).toThrow(/minutes and seconds must be under 60/);
   });
 });

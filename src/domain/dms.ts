@@ -36,7 +36,9 @@ export const parseDms = (text: string): { lat: number; lon: number } => {
     const minutes = Number(min);
     const seconds = Number(sec);
     if (minutes >= 60 || seconds >= 60) {
-      throw new Error(`Invalid DMS coordinate component in: ${text}`);
+      throw new Error(
+        `Invalid DMS coordinate (minutes and seconds must be under 60): ${text}`
+      );
     }
     const sign = hemi === "S" || hemi === "W" ? -1 : 1;
     return sign * (Number(deg) + minutes / 60 + seconds / 3600);
