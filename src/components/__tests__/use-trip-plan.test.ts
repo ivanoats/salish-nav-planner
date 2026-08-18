@@ -178,7 +178,7 @@ describe("useTripPlan", () => {
 
       expect(result.current.stopSlugs[0]).toBe("home");
       expect(result.current.stopSlugs).toContain("b");
-      expect(result.current.stopSlugs.length).toBe(result.current.tripDays.length + 1);
+      expect(result.current.stopSlugs).toHaveLength(result.current.tripDays.length + 1);
     });
 
     it("has no stops at all before a start is chosen", () => {
