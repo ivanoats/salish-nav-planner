@@ -278,7 +278,9 @@ passage name that resolves against `public/data/waypoints.json` (a
 small hand-curated set of well-known straits/passages with no own
 nwcruising.net page — Deception Pass, Admiralty Inlet, Colvos Passage,
 etc). This is an approximation for trip planning, not a chartplotter
-route.
+route. For options to move those lines onto water, including an
+evaluation of `searoute-py`, see
+`docs/adr/0001-water-route-geometry-options.md`.
 
 **Licensing**: robots.txt permits crawling `nm_folders/`, `ca-nm_folders/`,
 and `routes*/`, but no redistribution permission has been sought from
