@@ -83,7 +83,12 @@ const allowsEmptyDataset = (): boolean => process.env.ALLOW_EMPTY_DATASET === "1
  * are faults worth stopping for, so this throws unless the build has
  * explicitly said it can live without the data.
  */
-const readScrapedJson = async <T>(fileName: string, whenAllowedEmpty: T): Promise<T> => {
+const readScrapedJson = async <T>(
+  fileName: string,
+  whenAllowedEmpty: T,
+  /** What the planner loses without this particular file. */
+  lostWithoutIt: string
+): Promise<T> => {
   try {
     return await readJson<T>(fileName);
   } catch (error) {
@@ -93,14 +98,20 @@ const readScrapedJson = async <T>(fileName: string, whenAllowedEmpty: T): Promis
       throw new Error(
         `Route data is missing: public/data/${fileName} does not exist.\n` +
           `  • Locally, run \`npm run scrape\` to generate it.\n` +
-          `  • On a deploy, set DATASET_BASE_URL so \`npm run dataset\` can fetch it.\n` +
+          `  • On a deploy, set R2_ACCOUNT_ID, R2_BUCKET, R2_ACCESS_KEY_ID and\n` +
+          `    R2_SECRET_ACCESS_KEY (or DATASET_BASE_URL) so \`npm run dataset\`\n` +
+          `    can fetch it.\n` +
           `  • To build without route data anyway (CI), set ALLOW_EMPTY_DATASET=1.`
       );
     }
 
+    // Named per file rather than as a blanket "no route data": the two
+    // are missing for different reasons and cost different things, and a
+    // warning that overstates what is wrong is a warning people learn to
+    // skim past.
     console.warn(
       `[load-dataset] ${fileName} is missing and ALLOW_EMPTY_DATASET is set — ` +
-        `continuing with no route data, so the planner will have no destinations.`
+        `continuing without it, so ${lostWithoutIt}.`
     );
     return whenAllowedEmpty;
   }
@@ -140,8 +151,16 @@ export const loadDataset = async (): Promise<Dataset> => {
   // a missing one is a broken checkout rather than an ungenerated cache,
   // and should fail loudly.
   const [geojson, edges, waypoints, passes, windZones, obstructions, fixes] = await Promise.all([
-    readScrapedJson<LocationFeatureCollection>("locations.geojson", EMPTY_FEATURES),
-    readScrapedJson<RouteEdge[]>("edges.json", []),
+    readScrapedJson<LocationFeatureCollection>(
+      "locations.geojson",
+      EMPTY_FEATURES,
+      "the planner will have no destinations to pick from"
+    ),
+    readScrapedJson<RouteEdge[]>(
+      "edges.json",
+      [],
+      "the planner will have destinations but no routes between them"
+    ),
     readJson<Waypoint[]>("waypoints.json"),
     readJson<TidalPass[]>("passes.json"),
     readJson<WindZone[]>("wind-zones.json"),

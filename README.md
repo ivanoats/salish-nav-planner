@@ -172,14 +172,14 @@ deployment unless the chart archive's licence permits public hosting.
 
 ```sh
 npm run dev         # stage maplibre worker + panda codegen + next dev
-npm run build       # stage maplibre worker + panda codegen + next build
+npm run build       # maplibre worker + fetch dataset + panda codegen + next build
 npm run typecheck   # panda codegen + tsc --noEmit
 npm run test         # vitest run
 npm run test:coverage # vitest run --coverage
 npm run test:watch  # vitest watch mode
 npm run lint         # eslint
 npm run scrape       # re-run the nwcruising.net crawler
-npm run dataset      # fetch hosted route data (needs DATASET_BASE_URL)
+npm run dataset      # fetch hosted route data (needs the R2_* vars)
 npm run build:passes # rebuild public/data/passes.json from NOAA + CHS
 ```
 
