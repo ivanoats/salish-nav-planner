@@ -1,8 +1,19 @@
 ---
 name: interface-polish
-description: Design-engineering rules that make UI feel finished — concentric radii and optical alignment, animation and easing, typography and smart punctuation, semantic color tokens and dark mode, accessibility and focus behavior, spacing rhythm, and UI writing. Use this whenever you are writing or reviewing frontend code a human will look at: building or restyling a component, adding hover/pressed/focus/disabled states, wiring up a form or modal, adding an animation or transition, setting up a color palette or dark mode, writing button labels or empty states, or when asked to make something "feel more polished", "look more professional", or "tighten up the design". Apply it proactively during frontend work rather than waiting to be asked about design.
+description: >-
+  Design-engineering rules that make UI feel finished — concentric radii and optical
+  alignment, animation and easing, typography and smart punctuation, semantic color
+  tokens and dark mode, accessibility and focus behavior, spacing rhythm, and UI
+  writing. Use this whenever you are writing or reviewing frontend code a human will
+  look at: building or restyling a component, adding hover/pressed/focus/disabled
+  states, wiring up a form or modal, adding an animation or transition, setting up a
+  color palette or dark mode, writing button labels or empty states, or when asked
+  to make something "feel more polished", "look more professional", or "tighten up
+  the design". Apply it proactively during frontend work rather than waiting to be
+  asked about design.
 ---
 
+<!-- markdownlint-disable MD013 -->
 # Interface Polish
 
 Concrete, mostly one-line fixes that separate a UI that works from one that
