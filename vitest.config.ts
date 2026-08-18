@@ -22,12 +22,12 @@ export default defineConfig({
       include: [
         "src/domain/**/*.ts",
         "src/application/**/*.ts",
-        // src/adapters/ is excluded — Next.js server glue and in-memory
-        // repositories are covered by integration/e2e tests, not unit tests.
+        "src/adapters/**/*.ts",
       ],
       exclude: [
         "src/**/*.test.ts",
         "src/**/*.test.tsx",
+        // Ports are interfaces: no runtime code to cover.
         "src/**/ports/**",
       ],
       thresholds: {
