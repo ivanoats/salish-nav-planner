@@ -2,6 +2,7 @@ import { haversineNm } from "./geo";
 import type { Coordinates, Location, Waypoint } from "./location";
 import type { PlannedRoute } from "./route";
 import { normalizeName } from "./slug";
+import { buildCoordinateIndex } from "./via-resolution";
 
 /** [lon, lat] as GeoJSON expects. */
 export type LonLat = readonly [number, number];
@@ -16,28 +17,17 @@ interface ResolvedDisplayWaypoint {
   readonly display: readonly Coordinates[];
 }
 
-const buildWaypointLookup = (
+const buildCorridorLookup = (
   waypoints: readonly Waypoint[]
-): ReadonlyMap<string, Waypoint> => {
-  const byName = new Map<string, Waypoint>();
+): ReadonlyMap<string, readonly Coordinates[]> => {
+  const byName = new Map<string, readonly Coordinates[]>();
 
   for (const waypoint of waypoints) {
-    byName.set(normalizeName(waypoint.name), waypoint);
+    const display = waypoint.corridor ?? [{ lat: waypoint.lat, lon: waypoint.lon }];
+    byName.set(normalizeName(waypoint.name), display);
     for (const alias of waypoint.aliases ?? []) {
-      byName.set(normalizeName(alias), waypoint);
+      byName.set(normalizeName(alias), display);
     }
-  }
-
-  return byName;
-};
-
-const buildLocationLookup = (
-  locationsBySlug: ReadonlyMap<string, Location>
-): ReadonlyMap<string, Coordinates> => {
-  const byName = new Map<string, Coordinates>();
-
-  for (const location of locationsBySlug.values()) {
-    byName.set(normalizeName(location.name), { lat: location.lat, lon: location.lon });
   }
 
   return byName;
@@ -45,24 +35,16 @@ const buildLocationLookup = (
 
 const resolveDisplayWaypoint = (
   normalizedName: string,
-  locationsByName: ReadonlyMap<string, Coordinates>,
-  waypointsByName: ReadonlyMap<string, Waypoint>
+  lookup: ReturnType<typeof buildCoordinateIndex>,
+  corridorsByName: ReadonlyMap<string, readonly Coordinates[]>,
+  useCorridors: boolean
 ): ResolvedDisplayWaypoint | null => {
-  const waypoint = waypointsByName.get(normalizedName);
-  if (waypoint !== undefined) {
-    const anchor = { lat: waypoint.lat, lon: waypoint.lon };
-    return {
-      anchor,
-      display: waypoint.corridor ?? [anchor],
-    };
-  }
-
-  const location = locationsByName.get(normalizedName);
-  if (location !== undefined) {
-    return { anchor: location, display: [location] };
-  }
-
-  return null;
+  const anchor = lookup.lookup(normalizedName);
+  if (anchor === undefined) return null;
+  return {
+    anchor,
+    display: useCorridors ? (corridorsByName.get(normalizedName) ?? [anchor]) : [anchor],
+  };
 };
 
 const orientCorridor = (
@@ -88,14 +70,15 @@ const orientCorridor = (
  * between, then the leg's end. Consecutive duplicate points (a leg's end
  * equals the next leg's start) are collapsed.
  */
-export const buildRouteLineCoordinates = (
+const buildRouteLinePoints = (
   route: PlannedRoute,
   locationsBySlug: ReadonlyMap<string, Location>,
-  waypoints: readonly Waypoint[]
-): LonLat[] => {
+  waypoints: readonly Waypoint[],
+  useCorridors: boolean
+): Coordinates[] => {
   const points: Coordinates[] = [];
-  const locationsByName = buildLocationLookup(locationsBySlug);
-  const waypointsByName = buildWaypointLookup(waypoints);
+  const lookup = buildCoordinateIndex([...locationsBySlug.values()], waypoints);
+  const corridorsByName = buildCorridorLookup(waypoints);
 
   const push = (point: Coordinates) => {
     const last = points[points.length - 1];
@@ -110,7 +93,9 @@ export const buildRouteLineCoordinates = (
     if (from === undefined || to === undefined) continue;
 
     const via = leg.via
-      .map((name) => resolveDisplayWaypoint(normalizeName(name), locationsByName, waypointsByName))
+      .map((name) =>
+        resolveDisplayWaypoint(normalizeName(name), lookup, corridorsByName, useCorridors)
+      )
       .filter((point): point is ResolvedDisplayWaypoint => point !== null);
 
     push(from);
@@ -132,5 +117,26 @@ export const buildRouteLineCoordinates = (
     push(to);
   }
 
-  return points.map(toLonLat);
+  return points;
 };
+
+/**
+ * Turns a planned route into its anchor-only polyline: each leg's start,
+ * any resolved via-waypoints, then the leg's end. Consecutive duplicate
+ * points (a leg's end equals the next leg's start) are collapsed.
+ */
+export const buildRouteLineCoordinates = (
+  route: PlannedRoute,
+  locationsBySlug: ReadonlyMap<string, Location>,
+  waypoints: readonly Waypoint[]
+): LonLat[] => buildRouteLinePoints(route, locationsBySlug, waypoints, false).map(toLonLat);
+
+/**
+ * Turns a planned route into its display polyline, expanding curated
+ * waypoint corridors where available.
+ */
+export const buildDisplayedRouteLineCoordinates = (
+  route: PlannedRoute,
+  locationsBySlug: ReadonlyMap<string, Location>,
+  waypoints: readonly Waypoint[]
+): LonLat[] => buildRouteLinePoints(route, locationsBySlug, waypoints, true).map(toLonLat);

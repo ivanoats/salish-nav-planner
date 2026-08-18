@@ -116,7 +116,7 @@ Start with Option A:
 
 1. Add corridor polylines for the handful of passages that cause the
    most obvious land crossings.
-2. Update `buildRouteLineCoordinates` to expand a named passage into its
+2. Update `buildDisplayedRouteLineCoordinates` to expand a named passage into its
    corridor coordinates instead of a single midpoint when available.
 3. Re-check how that affects both map output and obstruction matching.
 

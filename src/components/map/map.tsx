@@ -15,7 +15,7 @@ import {
 import "maplibre-gl/dist/maplibre-gl.css";
 import { Protocol } from "pmtiles";
 import { useEffect, useRef, useState } from "react";
-import { buildRouteLineCoordinates } from "@/domain/route-line";
+import { buildDisplayedRouteLineCoordinates } from "@/domain/route-line";
 import type { Location, Waypoint } from "@/domain/location";
 import type { PlannedRoute } from "@/domain/route";
 
@@ -222,7 +222,7 @@ export function MapView({
 
     routes.forEach((dayRoute, index) => {
       if (dayRoute.legs.length === 0) return;
-      const coordinates = buildRouteLineCoordinates(dayRoute, locationsBySlug, waypoints).map(
+      const coordinates = buildDisplayedRouteLineCoordinates(dayRoute, locationsBySlug, waypoints).map(
         ([lon, lat]) => [lon, lat] as [number, number]
       );
       if (coordinates.length === 0) return;

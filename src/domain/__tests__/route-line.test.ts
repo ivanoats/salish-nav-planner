@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { buildRouteLineCoordinates } from "../route-line";
+import { buildDisplayedRouteLineCoordinates, buildRouteLineCoordinates } from "../route-line";
 import type { Location, Waypoint } from "../location";
 import type { PlannedRoute } from "../route";
 
@@ -69,7 +69,7 @@ describe("buildRouteLineCoordinates", () => {
     ]);
   });
 
-  it("expands a waypoint corridor when one is available", () => {
+  it("keeps the anchor-only polyline when a waypoint also has a corridor", () => {
     const route: PlannedRoute = {
       legs: [
         { from: "shilshole", to: "friday", nm: 72.2, hrMin: "10:19", via: ["Deception Pass"] },
@@ -80,6 +80,26 @@ describe("buildRouteLineCoordinates", () => {
     const coords = buildRouteLineCoordinates(route, locationsBySlug, [deceptionPassWithCorridor]);
     expect(coords).toEqual([
       [shilshole.lon, shilshole.lat],
+      [deceptionPass.lon, deceptionPass.lat],
+      [friday.lon, friday.lat],
+    ]);
+  });
+
+  it("expands a waypoint corridor when one is available for display", () => {
+    const route: PlannedRoute = {
+      legs: [
+        { from: "shilshole", to: "friday", nm: 72.2, hrMin: "10:19", via: ["Deception Pass"] },
+      ],
+      totalNm: 72.2,
+      totalHrMin: "10:19",
+    };
+    const coords = buildDisplayedRouteLineCoordinates(
+      route,
+      locationsBySlug,
+      [deceptionPassWithCorridor]
+    );
+    expect(coords).toEqual([
+      [shilshole.lon, shilshole.lat],
       [-122.6468, 48.3995],
       [-122.6442, 48.4042],
       [-122.6371, 48.4099],
@@ -87,7 +107,7 @@ describe("buildRouteLineCoordinates", () => {
     ]);
   });
 
-  it("reverses a corridor when the leg traverses it the opposite way", () => {
+  it("reverses a corridor when the leg traverses it the opposite way for display", () => {
     const route: PlannedRoute = {
       legs: [
         { from: "friday", to: "shilshole", nm: 72.2, hrMin: "10:19", via: ["Deception Pass"] },
@@ -95,7 +115,11 @@ describe("buildRouteLineCoordinates", () => {
       totalNm: 72.2,
       totalHrMin: "10:19",
     };
-    const coords = buildRouteLineCoordinates(route, locationsBySlug, [deceptionPassWithCorridor]);
+    const coords = buildDisplayedRouteLineCoordinates(
+      route,
+      locationsBySlug,
+      [deceptionPassWithCorridor]
+    );
     expect(coords).toEqual([
       [friday.lon, friday.lat],
       [-122.6371, 48.4099],
