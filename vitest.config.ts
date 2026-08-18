@@ -23,6 +23,10 @@ export default defineConfig({
         "src/domain/**/*.ts",
         "src/application/**/*.ts",
         "src/adapters/**/*.ts",
+        // The hooks, not the views. useTripPlan holds the override
+        // invalidation and the currents window, which is logic worth
+        // gating; the .tsx files are markup and stay out.
+        "src/components/**/*.ts",
       ],
       exclude: [
         "src/**/*.test.ts",
