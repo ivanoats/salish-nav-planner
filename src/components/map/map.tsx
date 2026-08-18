@@ -141,49 +141,45 @@ export function MapView({
       );
     }
 
-    // Below the route line so a leg is never hidden by the ports it links.
-    // Starts hidden and is switched on by the visibility effect below, which
-    // keeps `showAllLocations` out of this effect's deps — reading it here
-    // would rebuild the whole map on every toggle.
-    layers.push({
-      id: LOCATIONS_LAYER_ID,
-      type: "circle",
-      source: LOCATIONS_SOURCE_ID,
-      layout: { visibility: "none" },
-      paint: {
-        "circle-radius": [
-          "interpolate",
-          ["linear"],
-          ["zoom"],
-          ...LOCATION_DOT_RADIUS.flat(),
-        ],
-        "circle-color": LOCATION_DOT_COLOR,
-        "circle-opacity": 0.85,
-        "circle-stroke-width": 1,
-        "circle-stroke-color": LOCATION_DOT_STROKE_COLOR,
+    // Dots first, so they sit below the route line and a leg is never hidden
+    // by the ports it links. They start hidden and are switched on by the
+    // visibility effect below, which keeps `showAllLocations` out of this
+    // effect's deps — reading it here would rebuild the map on every toggle.
+    layers.push(
+      {
+        id: LOCATIONS_LAYER_ID,
+        type: "circle",
+        source: LOCATIONS_SOURCE_ID,
+        layout: { visibility: "none" },
+        paint: {
+          "circle-radius": ["interpolate", ["linear"], ["zoom"], ...LOCATION_DOT_RADIUS.flat()],
+          "circle-color": LOCATION_DOT_COLOR,
+          "circle-opacity": 0.85,
+          "circle-stroke-width": 1,
+          "circle-stroke-color": LOCATION_DOT_STROKE_COLOR,
+        },
       },
-    });
-
-    layers.push({
-      id: ROUTE_SOURCE_ID,
-      type: "line",
-      source: ROUTE_SOURCE_ID,
-      layout: { "line-join": "round", "line-cap": "round" },
-      paint: {
-        // Alternate hue by day parity so consecutive legs stay
-        // distinguishable where a multi-day route doubles back on itself.
-        "line-color": [
-          "case",
-          ["==", ["%", ["coalesce", ["get", "day"], 1], 2], 0],
-          "#7c3aed",
-          "#2563eb",
-        ],
-        "line-width": 3,
-        // Dash lengths are multiples of line-width, so keep the "on"
-        // segment >= ~1 or it renders as sub-pixel dots that vanish.
-        "line-dasharray": [2, 1.5],
-      },
-    });
+      {
+        id: ROUTE_SOURCE_ID,
+        type: "line",
+        source: ROUTE_SOURCE_ID,
+        layout: { "line-join": "round", "line-cap": "round" },
+        paint: {
+          // Alternate hue by day parity so consecutive legs stay
+          // distinguishable where a multi-day route doubles back on itself.
+          "line-color": [
+            "case",
+            ["==", ["%", ["coalesce", ["get", "day"], 1], 2], 0],
+            "#7c3aed",
+            "#2563eb",
+          ],
+          "line-width": 3,
+          // Dash lengths are multiples of line-width, so keep the "on"
+          // segment >= ~1 or it renders as sub-pixel dots that vanish.
+          "line-dasharray": [2, 1.5],
+        },
+      }
+    );
 
     const map = new MapLibreMap({
       container: containerRef.current,
