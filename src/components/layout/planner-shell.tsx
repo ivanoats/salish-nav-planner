@@ -71,7 +71,8 @@ export function PlannerShell({
         height: "100dvh",
       })}
     >
-      <div
+      <aside
+        aria-label="Trip planner controls"
         data-print-sidebar
         className={css({
           width: { base: "full", md: "96" },
@@ -86,7 +87,7 @@ export function PlannerShell({
         })}
       >
         <div>
-          <h1 className={css({ fontSize: "lg", fontWeight: "bold" })}>Salish Sea Nav Planner</h1>
+          <h1 className={css({ fontSize: "xl", fontWeight: "bold" })}>Salish Sea Nav Planner</h1>
           <p className={css({ fontSize: "xs", color: "fg.muted" })}>
             Trip-planning aid, sourced from nwcruising.net distance tables. Not for navigation.
           </p>
@@ -118,33 +119,35 @@ export function PlannerShell({
           onWindAwareChange={trip.setWindAware}
         />
 
-        <LocationPicker
-          label="Start"
-          locations={locations}
-          value={trip.startSlug}
-          onChange={trip.setStartSlug}
-        />
-        <LocationPicker
-          label={trip.days > 1 ? "Day 1 destination" : "Destination"}
-          locations={locations}
-          value={trip.firstDestinationSlug}
-          onChange={trip.setFirstDestinationSlug}
-        />
-
-        {trip.days > 1 && !trip.roundTrip ? (
+        <div className={css({ display: "flex", flexDirection: "column", gap: "3" })}>
           <LocationPicker
-            label="End at (optional)"
+            label="Start"
             locations={locations}
-            value={trip.endSlug}
-            onChange={trip.setCustomEndSlug}
+            value={trip.startSlug}
+            onChange={trip.setStartSlug}
           />
-        ) : null}
+          <LocationPicker
+            label={trip.days > 1 ? "Day 1 destination" : "Destination"}
+            locations={locations}
+            value={trip.firstDestinationSlug}
+            onChange={trip.setFirstDestinationSlug}
+          />
 
-        {hasStartAndFirstStop && trip.tripDays[0]?.route === null ? (
-          <p className={css({ fontSize: "sm", color: "fg.muted" })}>
-            No known route between these locations yet.
-          </p>
-        ) : null}
+          {trip.days > 1 && !trip.roundTrip ? (
+            <LocationPicker
+              label="End at (optional)"
+              locations={locations}
+              value={trip.endSlug}
+              onChange={trip.setCustomEndSlug}
+            />
+          ) : null}
+
+          {hasStartAndFirstStop && trip.tripDays[0]?.route === null ? (
+            <p className={css({ fontSize: "sm", color: "fg.muted" })}>
+              No known route between these locations yet.
+            </p>
+          ) : null}
+        </div>
         </div>
 
         <DayItinerary
@@ -176,7 +179,7 @@ export function PlannerShell({
         ) : null}
 
         {dayRoutes.length > 0 ? <PrintButton /> : null}
-      </div>
+      </aside>
 
       <div data-print-map className={css({ flex: "1", minHeight: { base: "80", md: "auto" } })}>
         <MapApp
