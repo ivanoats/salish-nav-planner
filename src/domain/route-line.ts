@@ -16,8 +16,6 @@ interface ResolvedDisplayWaypoint {
   readonly display: readonly Coordinates[];
 }
 
-const representativePoint = (point: Coordinates): Coordinates => ({ lat: point.lat, lon: point.lon });
-
 const buildWaypointLookup = (
   waypoints: readonly Waypoint[]
 ): ReadonlyMap<string, Waypoint> => {
@@ -39,27 +37,27 @@ const buildLocationLookup = (
   const byName = new Map<string, Coordinates>();
 
   for (const location of locationsBySlug.values()) {
-    byName.set(normalizeName(location.name), representativePoint(location));
+    byName.set(normalizeName(location.name), { lat: location.lat, lon: location.lon });
   }
 
   return byName;
 };
 
 const resolveDisplayWaypoint = (
-  name: string,
+  normalizedName: string,
   locationsByName: ReadonlyMap<string, Coordinates>,
   waypointsByName: ReadonlyMap<string, Waypoint>
 ): ResolvedDisplayWaypoint | null => {
-  const waypoint = waypointsByName.get(normalizeName(name));
+  const waypoint = waypointsByName.get(normalizedName);
   if (waypoint !== undefined) {
-    const anchor = representativePoint(waypoint);
+    const anchor = { lat: waypoint.lat, lon: waypoint.lon };
     return {
       anchor,
       display: waypoint.corridor ?? [anchor],
     };
   }
 
-  const location = locationsByName.get(normalizeName(name));
+  const location = locationsByName.get(normalizedName);
   if (location !== undefined) {
     return { anchor: location, display: [location] };
   }
@@ -112,19 +110,23 @@ export const buildRouteLineCoordinates = (
     if (from === undefined || to === undefined) continue;
 
     const via = leg.via
-      .map((name) => resolveDisplayWaypoint(name, locationsByName, waypointsByName))
+      .map((name) => resolveDisplayWaypoint(normalizeName(name), locationsByName, waypointsByName))
       .filter((point): point is ResolvedDisplayWaypoint => point !== null);
 
     push(from);
+    let previous: Coordinates = from;
 
     for (const [index, waypoint] of via.entries()) {
-      const previous = index === 0 ? from : via[index - 1]?.anchor;
       const next = via[index + 1]?.anchor ?? to;
-      if (previous === undefined) continue;
+      const display = orientCorridor(waypoint.display, previous, next);
 
-      for (const point of orientCorridor(waypoint.display, previous, next)) {
+      for (const point of display) {
         push(point);
       }
+
+      const last = display[display.length - 1];
+      if (last === undefined) continue;
+      previous = last;
     }
 
     push(to);
