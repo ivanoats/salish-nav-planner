@@ -39,6 +39,83 @@ const deceptionPassWithCorridor: Waypoint = {
   ],
 };
 
+/** South of Deception Pass, so the two have a clear north-south order. */
+const admiraltyInlet: Waypoint = { name: "Admiralty Inlet", lat: 48.16, lon: -122.72 };
+
+describe("via ordering", () => {
+  // The route tables name a passage the same way whichever way you transit
+  // it, so one direction of a pair arrives listed backwards. Drawing that
+  // order sends the line up past both passages and back down again — and
+  // pass ETAs scale distance along this polyline, so the doubled length
+  // halves every distance read off it.
+  const northbound: PlannedRoute = {
+    legs: [
+      {
+        from: "shilshole",
+        to: "friday",
+        nm: 72.2,
+        hrMin: "10:19",
+        via: ["Deception Pass", "Admiralty Inlet"],
+      },
+    ],
+    totalNm: 72.2,
+    totalHrMin: "10:19",
+  };
+
+  it("sorts via notes into travel order rather than trusting how they're listed", () => {
+    const coords = buildRouteLineCoordinates(northbound, locationsBySlug, [
+      deceptionPass,
+      admiraltyInlet,
+    ]);
+
+    expect(coords).toEqual([
+      [shilshole.lon, shilshole.lat],
+      [admiraltyInlet.lon, admiraltyInlet.lat],
+      [deceptionPass.lon, deceptionPass.lat],
+      [friday.lon, friday.lat],
+    ]);
+  });
+
+  it("orders them the other way round on the return leg", () => {
+    const southbound: PlannedRoute = {
+      legs: [
+        {
+          from: "friday",
+          to: "shilshole",
+          nm: 72.2,
+          hrMin: "10:19",
+          via: ["Admiralty Inlet", "Deception Pass"],
+        },
+      ],
+      totalNm: 72.2,
+      totalHrMin: "10:19",
+    };
+
+    const coords = buildRouteLineCoordinates(southbound, locationsBySlug, [
+      deceptionPass,
+      admiraltyInlet,
+    ]);
+
+    expect(coords).toEqual([
+      [friday.lon, friday.lat],
+      [deceptionPass.lon, deceptionPass.lat],
+      [admiraltyInlet.lon, admiraltyInlet.lat],
+      [shilshole.lon, shilshole.lat],
+    ]);
+  });
+
+  it("keeps the drawn line from doubling back past the far passage", () => {
+    // The failure this guards: listed order drew Shilshole up to Deception
+    // Pass, back south to Admiralty, then north again to Friday Harbor.
+    const lats = buildRouteLineCoordinates(northbound, locationsBySlug, [
+      deceptionPass,
+      admiraltyInlet,
+    ]).map(([, lat]) => lat);
+
+    expect(lats).toEqual([...lats].sort((a, b) => a - b));
+  });
+});
+
 describe("buildRouteLineCoordinates", () => {
   it("builds a straight 2-point line for a direct leg with no via", () => {
     const route: PlannedRoute = {

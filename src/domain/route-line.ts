@@ -1,4 +1,4 @@
-import { haversineNm } from "./geo";
+import { alongTrackNm, haversineNm } from "./geo";
 import type { Coordinates, Location, Waypoint } from "./location";
 import type { PlannedRoute } from "./route";
 import { normalizeName } from "./slug";
@@ -92,11 +92,17 @@ const buildRouteLinePoints = (
     const to = locationsBySlug.get(leg.to);
     if (from === undefined || to === undefined) continue;
 
+    // Sorted into travel order rather than trusted as listed: the tables
+    // name a passage the same way in both directions, so a leg can arrive
+    // with its notes backwards and draw a line that doubles back. That
+    // matters beyond looks — pass ETAs scale distance along this polyline,
+    // so a line twice its true length halves every distance taken from it.
     const via = leg.via
       .map((name) =>
         resolveDisplayWaypoint(normalizeName(name), lookup, corridorsByName, useCorridors)
       )
-      .filter((point): point is ResolvedDisplayWaypoint => point !== null);
+      .filter((point): point is ResolvedDisplayWaypoint => point !== null)
+      .sort((a, b) => alongTrackNm(a.anchor, from, to) - alongTrackNm(b.anchor, from, to));
 
     push(from);
     let previous: Coordinates = from;
