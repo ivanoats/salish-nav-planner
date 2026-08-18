@@ -57,10 +57,22 @@ describe("clearsUnder", () => {
     expect(clearsUnder(canal, 60)).toBe(false);
   });
 
+  it("turns back a rig at exactly the stated clearance", () => {
+    // The point of the margin: a published clearance is a nominal figure,
+    // not a survey, so a 58ft rig under a 58ft span is not a fit. Pinned
+    // separately from the boundary below, which is margin-agnostic and so
+    // would go on passing if the margin were ever zeroed out.
+    expect(AIR_DRAFT_MARGIN_FEET).toBeGreaterThan(0);
+    expect(clearsUnder(canal, canal.clearanceFeet)).toBe(false);
+  });
+
   it("counts the margin, not just the mast", () => {
-    // 53 + 5 = 58, exactly the clearance, so it still fits.
-    expect(clearsUnder(canal, 53)).toBe(true);
-    expect(clearsUnder(canal, 54)).toBe(false);
+    // The tallest rig that reaches the clearance exactly, once the margin
+    // is counted, still fits; a foot more does not. Derived rather than
+    // written out, so retuning the margin doesn't read as a regression.
+    const exactFit = canal.clearanceFeet - AIR_DRAFT_MARGIN_FEET;
+    expect(clearsUnder(canal, exactFit)).toBe(true);
+    expect(clearsUnder(canal, exactFit + 1)).toBe(false);
   });
 });
 

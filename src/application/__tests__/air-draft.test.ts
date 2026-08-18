@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { buildRouteGraph, findRoute, rankNextDestinations } from "../route-graph";
 import type { Location, Waypoint } from "@/domain/location";
-import type { Obstruction } from "@/domain/obstruction";
+import { AIR_DRAFT_MARGIN_FEET, type Obstruction } from "@/domain/obstruction";
 import type { RouteEdge } from "@/domain/route";
 
 const edge = (from: string, to: string, nm: number, via: string[] = []): RouteEdge => ({
@@ -75,10 +75,14 @@ describe("air draft and fixed spans", () => {
   });
 
   it("counts masthead gear against the clearance", () => {
-    // 55ft of mast under a 58ft span looks like it fits, but the margin
-    // for antenna and windvane says otherwise.
-    expect(findRoute(graphWith([lowBridge]), "south", "north", 55)?.totalNm).toBe(24);
-    expect(findRoute(graphWith([lowBridge]), "south", "north", 52)?.totalNm).toBe(9);
+    // Bare mast height alone would send both of these under the span. The
+    // taller one clears the stated 58ft and is still turned back, because
+    // the margin for antenna and windvane goes on top of it.
+    const tallestThatFits = lowBridge.clearanceFeet - AIR_DRAFT_MARGIN_FEET;
+    expect(
+      findRoute(graphWith([lowBridge]), "south", "north", tallestThatFits + 1)?.totalNm
+    ).toBe(24);
+    expect(findRoute(graphWith([lowBridge]), "south", "north", tallestThatFits)?.totalNm).toBe(9);
   });
 
   it("ignores clearance entirely when no mast height is given", () => {
