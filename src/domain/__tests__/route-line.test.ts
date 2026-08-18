@@ -30,6 +30,14 @@ const locationsBySlug = new Map(
 );
 
 const deceptionPass: Waypoint = { name: "Deception Pass", lat: 48.4064, lon: -122.6428 };
+const deceptionPassWithCorridor: Waypoint = {
+  ...deceptionPass,
+  corridor: [
+    { lat: 48.3995, lon: -122.6468 },
+    { lat: 48.4042, lon: -122.6442 },
+    { lat: 48.4099, lon: -122.6371 },
+  ],
+};
 
 describe("buildRouteLineCoordinates", () => {
   it("builds a straight 2-point line for a direct leg with no via", () => {
@@ -61,6 +69,42 @@ describe("buildRouteLineCoordinates", () => {
     ]);
   });
 
+  it("expands a waypoint corridor when one is available", () => {
+    const route: PlannedRoute = {
+      legs: [
+        { from: "shilshole", to: "friday", nm: 72.2, hrMin: "10:19", via: ["Deception Pass"] },
+      ],
+      totalNm: 72.2,
+      totalHrMin: "10:19",
+    };
+    const coords = buildRouteLineCoordinates(route, locationsBySlug, [deceptionPassWithCorridor]);
+    expect(coords).toEqual([
+      [shilshole.lon, shilshole.lat],
+      [-122.6468, 48.3995],
+      [-122.6442, 48.4042],
+      [-122.6371, 48.4099],
+      [friday.lon, friday.lat],
+    ]);
+  });
+
+  it("reverses a corridor when the leg traverses it the opposite way", () => {
+    const route: PlannedRoute = {
+      legs: [
+        { from: "friday", to: "shilshole", nm: 72.2, hrMin: "10:19", via: ["Deception Pass"] },
+      ],
+      totalNm: 72.2,
+      totalHrMin: "10:19",
+    };
+    const coords = buildRouteLineCoordinates(route, locationsBySlug, [deceptionPassWithCorridor]);
+    expect(coords).toEqual([
+      [friday.lon, friday.lat],
+      [-122.6371, 48.4099],
+      [-122.6442, 48.4042],
+      [-122.6468, 48.3995],
+      [shilshole.lon, shilshole.lat],
+    ]);
+  });
+
   it("collapses the shared point between consecutive legs", () => {
     const route: PlannedRoute = {
       legs: [
@@ -86,5 +130,21 @@ describe("buildRouteLineCoordinates", () => {
     };
     const coords = buildRouteLineCoordinates(route, locationsBySlug, []);
     expect(coords).toEqual([]);
+  });
+
+  it("falls back to a single representative point when a waypoint has no corridor", () => {
+    const route: PlannedRoute = {
+      legs: [
+        { from: "shilshole", to: "friday", nm: 72.2, hrMin: "10:19", via: ["Deception Pass"] },
+      ],
+      totalNm: 72.2,
+      totalHrMin: "10:19",
+    };
+    const coords = buildRouteLineCoordinates(route, locationsBySlug, [deceptionPass]);
+    expect(coords).toEqual([
+      [shilshole.lon, shilshole.lat],
+      [deceptionPass.lon, deceptionPass.lat],
+      [friday.lon, friday.lat],
+    ]);
   });
 });
