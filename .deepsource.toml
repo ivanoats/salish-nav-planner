@@ -1,12 +1,5 @@
 version = 1
 
-[[analyzers]]
-  name = "javascript"
-  enabled = true
-  
-  [analyzers.meta]
-   plugins = ["react"]
-
 exclude_patterns = [
   "node_modules/**",
   "public/**",
@@ -14,6 +7,16 @@ exclude_patterns = [
   "styled-system/**"
 ]
 
+# Anchored with a leading ** because the suites live beside the code
+# they cover — src/domain/__tests__, src/adapters/outbound/__tests__ and
+# so on — not in one directory at the repo root.
 test_patterns = [
-  "__tests__/**",
+  "**/__tests__/**"
 ]
+
+[[analyzers]]
+  name = "javascript"
+  enabled = true
+
+  [analyzers.meta]
+    plugins = ["react"]
