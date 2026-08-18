@@ -24,7 +24,7 @@ export function PrintButton() {
       data-print-button
       className={buttonStyle}
       onClick={() => window.print()}
-      aria-label="Print route summary"
+
     >
       <svg
         aria-hidden="true"

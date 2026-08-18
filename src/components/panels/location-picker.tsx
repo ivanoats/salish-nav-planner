@@ -76,7 +76,7 @@ export function LocationPicker({ label, locations, value, onChange }: LocationPi
           })}
         />
         <Combobox.ClearTrigger
-          aria-label="Clear selection"
+          aria-label={`Clear ${label}`}
           className={css({ fontSize: "sm", color: "fg.muted", cursor: "pointer" })}
         >
           ×
