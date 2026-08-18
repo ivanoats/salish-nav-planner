@@ -97,25 +97,89 @@ planner. Without the generated files, the app still builds but has no routes
 
 [`netlify.toml`](netlify.toml) configures Netlify to use Node.js 24, run the
 standard npm build, and deploy Next.js through Netlify's automatically managed
-OpenNext adapter. There are no required environment variables.
+OpenNext adapter.
+
+### Getting route data into a deploy
+
+`edges.json` and `locations.geojson` are gitignored, so a Git-based build
+checks out a repo with no routes in it. The home page is prerendered and
+reads them, so without something in place the site deploys looking
+perfectly functional with an **empty destination picker** — which is
+exactly what happened once.
+
+`npm run build` therefore runs `npm run dataset` first
+([`scripts/fetch-dataset.mjs`](scripts/fetch-dataset.mjs)), which pulls both
+files from wherever you host them:
+
+The files live in a **private Cloudflare R2 bucket**, read over R2's
+S3-compatible API with a SigV4-signed request:
+
+| Variable | Required | Purpose |
+| --- | --- | --- |
+| `R2_ACCOUNT_ID` | for deploys | Cloudflare account ID (the subdomain of the R2 S3 endpoint) |
+| `R2_BUCKET` | for deploys | Bucket name, e.g. `salish-nav-planner` |
+| `R2_ACCESS_KEY_ID` | for deploys | R2 API token, **Object Read only**, scoped to that bucket |
+| `R2_SECRET_ACCESS_KEY` | for deploys | Secret half of the same token |
+| `ALLOW_EMPTY_DATASET` | CI only | Set to `1` to permit a build with no route data |
+
+Any plain HTTPS store works too, as a fallback: set `DATASET_BASE_URL`
+(plus `DATASET_AUTH_TOKEN` for a bearer header) instead of the R2 group.
+
+On Netlify, mark **only** `R2_ACCESS_KEY_ID` and `R2_SECRET_ACCESS_KEY` as
+secret. Netlify's secret scanning fails any build whose output contains the
+value of a variable marked secret, and `R2_BUCKET` is `salish-nav-planner` —
+which is also the site name and the npm package name, so it appears in
+`package.json` and throughout the build. Marking it secret fails every
+deploy. It isn't a credential anyway: the bucket is private, and access is
+controlled by the key and secret, not by the name being hard to guess. The
+same goes for `R2_ACCOUNT_ID`, which appears in the endpoint hostname.
+
+Note also that `netlify build` run locally cannot read secret values back
+out of the API — it substitutes a 20-character mask — so a local run of it
+will fail signature checks even when the real deploy is fine. Debug against
+a real deploy, or against `.env`.
+
+Configure neither and the script does nothing, which is what a local
+checkout wants — `npm run scrape` has already put the real files there. For
+local testing against R2, put the four variables in a gitignored `.env`;
+the script loads it automatically.
+
+**The bucket must stay private.** Enabling its public `r2.dev` URL would
+publish nwcruising.net's tables to anyone who finds the address, which is
+exactly what keeping them out of this repo avoids. Read-only, bucket-scoped
+credentials keep the blast radius small if one leaks. For the same reason,
+do **not** add `npm run scrape` to the hosted build: that crawls their site
+on every deploy, which is a different thing from an occasional local
+refresh.
+
+Refresh the hosted copy after a re-scrape with:
+
+```sh
+wrangler r2 object put salish-nav-planner/edges.json \
+  --file=public/data/edges.json --content-type=application/json --remote
+wrangler r2 object put salish-nav-planner/locations.geojson \
+  --file=public/data/locations.geojson --content-type=application/geo+json --remote
+```
+
+A missing dataset now **fails the build** rather than shipping an empty
+planner. CI is the one exception — it has no scrape and only needs to know
+the app compiles, so its build step sets `ALLOW_EMPTY_DATASET=1`.
 
 `NEXT_PUBLIC_CHART_PMTILES_URL` is optional and must remain unset on a public
-deployment unless the chart archive's licence permits public hosting. The
-scraped route files are also intentionally absent from Git-based builds because
-redistribution permission has not been obtained; do not add `npm run scrape` to
-the hosted build without permission from the data owner.
+deployment unless the chart archive's licence permits public hosting.
 
 ## Commands
 
 ```sh
 npm run dev         # stage maplibre worker + panda codegen + next dev
-npm run build       # stage maplibre worker + panda codegen + next build
+npm run build       # maplibre worker + fetch dataset + panda codegen + next build
 npm run typecheck   # panda codegen + tsc --noEmit
 npm run test         # vitest run
 npm run test:coverage # vitest run --coverage
 npm run test:watch  # vitest watch mode
 npm run lint         # eslint
 npm run scrape       # re-run the nwcruising.net crawler
+npm run dataset      # fetch hosted route data (needs the R2_* vars)
 npm run build:passes # rebuild public/data/passes.json from NOAA + CHS
 ```
 
