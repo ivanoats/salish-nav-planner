@@ -33,6 +33,13 @@ const EVENT_TYPES: Record<string, CurrentEventType> = {
  * and extrema shape NOAA uses, in UTC.
  */
 export class ChsCurrentPredictions implements CurrentPredictionsProvider {
+  // These two adapters hold no state, so the method never touches `this`
+  // and JS-0105 suggests making it static. It cannot be: the port is
+  // consumed polymorphically — RegionalCurrentPredictions dispatches
+  // through `this.noaa.predictions(...)` on the interface — and a static
+  // method would not satisfy it. Suppressed rather than given a field it
+  // does not need.
+  // skipcq: JS-0105
   async predictions({
     station,
     fromMs,
