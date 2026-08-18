@@ -29,6 +29,11 @@ import {
   FIT_BOUNDS_PADDING,
   FIT_BOUNDS_MAX_ZOOM,
   FIT_BOUNDS_DURATION,
+  LOCATIONS_SOURCE_ID,
+  LOCATIONS_LAYER_ID,
+  LOCATION_DOT_COLOR,
+  LOCATION_DOT_STROKE_COLOR,
+  LOCATION_DOT_RADIUS,
 } from "./map-constants";
 
 interface MapProps {
@@ -38,6 +43,8 @@ interface MapProps {
   readonly stopLocations: readonly Location[];
   /** One route per planned day, in order. */
   readonly routes: readonly PlannedRoute[];
+  /** Whether to draw a dot for every location in the dataset. */
+  readonly showAllLocations: boolean;
   /** Optional local-only chart overlay — see README for how to set this up. */
   readonly chartPmtilesUrl?: string;
 }
@@ -74,11 +81,13 @@ export function MapView({
   waypoints,
   stopLocations,
   routes,
+  showAllLocations,
   chartPmtilesUrl,
 }: MapProps) {
   const containerRef = useRef<HTMLDivElement | null>(null);
   const mapRef = useRef<MapLibreMap | null>(null);
   const markersRef = useRef<Marker[]>([]);
+  const locationPopupRef = useRef<Popup | null>(null);
   const [styleLoaded, setStyleLoaded] = useState(false);
 
   useEffect(() => {
@@ -94,6 +103,7 @@ export function MapView({
         attribution: "© OpenStreetMap contributors",
       },
       [ROUTE_SOURCE_ID]: { type: "geojson", data: emptyFeatureCollection() },
+      [LOCATIONS_SOURCE_ID]: { type: "geojson", data: emptyFeatureCollection() },
     };
     const layers: LayerSpecification[] = [{ id: "basemap", type: "raster", source: "basemap" }];
 
@@ -128,6 +138,29 @@ export function MapView({
       );
     }
 
+    // Below the route line so a leg is never hidden by the ports it links.
+    // Starts hidden and is switched on by the visibility effect below, which
+    // keeps `showAllLocations` out of this effect's deps — reading it here
+    // would rebuild the whole map on every toggle.
+    layers.push({
+      id: LOCATIONS_LAYER_ID,
+      type: "circle",
+      source: LOCATIONS_SOURCE_ID,
+      layout: { visibility: "none" },
+      paint: {
+        "circle-radius": [
+          "interpolate",
+          ["linear"],
+          ["zoom"],
+          ...LOCATION_DOT_RADIUS.flat(),
+        ],
+        "circle-color": LOCATION_DOT_COLOR,
+        "circle-opacity": 0.85,
+        "circle-stroke-width": 1,
+        "circle-stroke-color": LOCATION_DOT_STROKE_COLOR,
+      },
+    });
+
     layers.push({
       id: ROUTE_SOURCE_ID,
       type: "line",
@@ -156,6 +189,28 @@ export function MapView({
       style: { version: 8, sources, layers },
     });
     map.addControl(new NavigationControl());
+
+    // A dot on its own says "something is here" without saying what, and 200
+    // labels at once would be unreadable, so the name arrives on demand.
+    map.on("click", LOCATIONS_LAYER_ID, (event) => {
+      const feature = event.features?.[0];
+      if (feature === undefined || feature.geometry.type !== "Point") return;
+      const [lon, lat] = feature.geometry.coordinates;
+      if (lon === undefined || lat === undefined) return;
+
+      locationPopupRef.current?.remove();
+      locationPopupRef.current = new Popup()
+        .setLngLat([lon, lat])
+        .setText(String(feature.properties.name))
+        .addTo(map);
+    });
+    map.on("mouseenter", LOCATIONS_LAYER_ID, () => {
+      map.getCanvas().style.cursor = "pointer";
+    });
+    map.on("mouseleave", LOCATIONS_LAYER_ID, () => {
+      map.getCanvas().style.cursor = "";
+    });
+
     mapRef.current = map;
     // "style.load" fires once sources/layers are queryable, without
     // waiting on tile network requests to finish — unlike "load", which
@@ -168,11 +223,53 @@ export function MapView({
     (window as unknown as { __navPlannerMap?: MapLibreMap }).__navPlannerMap = map;
 
     return () => {
+      locationPopupRef.current?.remove();
+      locationPopupRef.current = null;
       map.remove();
       mapRef.current = null;
       setStyleLoaded(false);
     };
   }, [chartPmtilesUrl]);
+
+  // Every location in the dataset, as one GeoJSON source rather than 200-odd
+  // DOM markers — the marker-per-location approach costs an element and a
+  // per-frame reprojection each, and stutters badly while panning.
+  useEffect(() => {
+    const map = mapRef.current;
+    if (map === null || !styleLoaded) return;
+
+    const source = map.getSource<GeoJSONSource>(LOCATIONS_SOURCE_ID);
+    if (source === undefined) return;
+
+    source.setData({
+      type: "FeatureCollection",
+      features: locations.map((location) => ({
+        type: "Feature",
+        properties: { slug: location.slug, name: location.name, region: location.region },
+        geometry: { type: "Point", coordinates: [location.lon, location.lat] },
+      })),
+    });
+  }, [locations, styleLoaded]);
+
+  // Toggling visibility keeps the parsed source and its tiles warm, so
+  // switching back on is instant — cheaper than adding and removing the layer.
+  useEffect(() => {
+    const map = mapRef.current;
+    if (map === null || !styleLoaded) return;
+    if (map.getLayer(LOCATIONS_LAYER_ID) === undefined) return;
+
+    map.setLayoutProperty(
+      LOCATIONS_LAYER_ID,
+      "visibility",
+      showAllLocations ? "visible" : "none"
+    );
+
+    // A popup left open over a hidden layer points at nothing.
+    if (!showAllLocations) {
+      locationPopupRef.current?.remove();
+      locationPopupRef.current = null;
+    }
+  }, [showAllLocations, styleLoaded]);
 
   // Stop markers: green for the trip's origin, red for its final stop,
   // amber for the overnight stops in between.
