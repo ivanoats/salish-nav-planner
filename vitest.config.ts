@@ -23,12 +23,20 @@ export default defineConfig({
         "src/domain/**/*.ts",
         "src/application/**/*.ts",
         "src/adapters/**/*.ts",
+        // The hooks, not the views. useTripPlan holds the override
+        // invalidation and the currents window, which is logic worth
+        // gating; the .tsx files are markup and stay out.
+        "src/components/**/*.ts",
       ],
       exclude: [
         "src/**/*.test.ts",
         "src/**/*.test.tsx",
         // Ports are interfaces: no runtime code to cover.
         "src/**/ports/**",
+        // Constant declarations only — no statements or branches to
+        // exercise, and v8 scores it zero purely because no test has
+        // cause to import it.
+        "src/components/map/map-constants.ts",
       ],
       thresholds: {
         statements: 80,
