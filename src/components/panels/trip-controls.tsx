@@ -259,7 +259,7 @@ export function TripControls({
           type="checkbox"
           checked={roundTrip}
           onChange={(e) => onRoundTripChange(e.target.checked)}
-          className={css({ cursor: "pointer" })}
+          className={css({ cursor: "pointer", _focusVisible: { outline: "2px solid", outlineColor: "colorPalette.9", outlineOffset: "2px" } })}
         />
         Round trip — end back at the start
       </label>
@@ -271,7 +271,7 @@ export function TripControls({
             checked={windAware}
             disabled={!hasWind}
             onChange={(e) => onWindAwareChange(e.target.checked)}
-            className={css({ cursor: "pointer" })}
+            className={css({ cursor: "pointer", _focusVisible: { outline: "2px solid", outlineColor: "colorPalette.9", outlineOffset: "2px" } })}
           />
           Let the forecast shape the plan
         </label>
