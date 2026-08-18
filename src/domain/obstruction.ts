@@ -39,11 +39,11 @@ export const MAX_MAST_HEIGHT_FEET = 200;
  *
  * Masthead gear — VHF whip, windvane, anchor light — is rarely counted
  * when someone says "fifty feet", and a published clearance is a nominal
- * figure rather than a survey. Five feet is small enough not to rule out
+ * figure rather than a survey. Three feet is small enough not to rule out
  * passages that genuinely fit and large enough to cover the usual gap
  * between what's on the spec sheet and what's actually up there.
  */
-export const AIR_DRAFT_MARGIN_FEET = 5;
+export const AIR_DRAFT_MARGIN_FEET = 3;
 
 export const clampMastHeight = (feet: number): number =>
   Number.isFinite(feet)

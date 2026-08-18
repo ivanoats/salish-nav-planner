@@ -21,7 +21,7 @@ Controls:
   can optionally name an **End at** port to finish somewhere else
   (deliver the boat to Anacortes), or leave that blank to wander one-way
   with no return obligation.
-- **Mast (ft)** — height above the water. Five feet is added for
+- **Mast (ft)** — height above the water. Three feet is added for
   masthead gear, and hops under fixed spans that don't clear are removed
   from the graph, so the planner routes *around* them: at 45 ft Port
   Ludlow to Port Townsend runs 12.9 nm through the Port Townsend Canal,

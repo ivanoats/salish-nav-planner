@@ -17,7 +17,9 @@ const { createComposition } = await import("@/composition-root");
 const { EMPTY_WIND_FIELD } = await import("@/domain/wind-field");
 const { localTimeToMs } = await import("@/domain/clock");
 const { MAX_TRIP_DAYS, MIN_DAY_HOURS, MAX_DAY_HOURS } = await import("@/domain/trip");
-const { AIR_DRAFT_MARGIN_FEET, MAX_MAST_HEIGHT_FEET } = await import("@/domain/obstruction");
+const { AIR_DRAFT_MARGIN_FEET, MAX_MAST_HEIGHT_FEET, airDraftFor } = await import(
+  "@/domain/obstruction"
+);
 
 import type { Location } from "@/domain/location";
 import type { RouteEdge } from "@/domain/route";
@@ -139,7 +141,11 @@ describe("useTripPlan", () => {
 
       act(() => result.current.setMastHeightFeet(50));
 
-      expect(result.current.mastHeightFeet + AIR_DRAFT_MARGIN_FEET).toBe(55);
+      // The hook holds the bare mast height, not the air draft: the margin
+      // goes on once, at the clearance check. Storing it pre-added here
+      // would count it twice and quietly rule out passages that fit.
+      expect(result.current.mastHeightFeet).toBe(50);
+      expect(airDraftFor(result.current.mastHeightFeet)).toBe(50 + AIR_DRAFT_MARGIN_FEET);
     });
   });
 
