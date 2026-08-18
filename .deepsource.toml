@@ -1,9 +1,11 @@
 version = 1
 
-analyzers = [
+[[analyzers]]
   name = "javascript"
   enabled = true
-]
+  
+  [analyzers.meta]
+   plugins = ["react"]
 
 exclude_patterns = [
   "node_modules/**",
