@@ -26,3 +26,26 @@ export const FIT_BOUNDS_MAX_ZOOM = 12;
 
 /** Animation duration (ms) for auto-fit transitions. */
 export const FIT_BOUNDS_DURATION = 500;
+
+/** MapLibre source ID for every location in the dataset. */
+export const LOCATIONS_SOURCE_ID = "all-locations";
+
+/** MapLibre layer ID for the all-locations circle layer. */
+export const LOCATIONS_LAYER_ID = "all-locations-circles";
+
+/** Fill colour for the all-locations dots. */
+export const LOCATION_DOT_COLOR = "#0f766e";
+
+/** Halo colour that keeps the dots legible over land and water alike. */
+export const LOCATION_DOT_STROKE_COLOR = "#ffffff";
+
+/**
+ * Dot radius by zoom. Small enough at the default Salish Sea zoom that 200+
+ * harbours read as a scatter of ports rather than a solid smear, and large
+ * enough to be a tappable target once zoomed into one.
+ */
+export const LOCATION_DOT_RADIUS: readonly (readonly [number, number])[] = [
+  [6, 2.5],
+  [9, 4],
+  [12, 6],
+];
