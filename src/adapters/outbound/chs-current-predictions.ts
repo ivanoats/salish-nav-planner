@@ -15,7 +15,7 @@ interface IwlsEvent {
   readonly value?: number;
 }
 
-const IWLS_TIMESTAMP = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}/;
+const IWLS_TIMESTAMP = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d+)?Z$/;
 
 const EVENT_TYPES: Record<string, CurrentEventType> = {
   SLACK: "slack",

@@ -97,6 +97,12 @@ describe("ChsCurrentPredictions", () => {
     await expect(predictions()).resolves.toEqual([]);
   });
 
+  it("rejects timestamps that omit the UTC designator", async () => {
+    respondWith([{ eventDate: "2026-08-15T01:16:00", qualifier: "SLACK", value: 0 }]);
+
+    await expect(predictions()).resolves.toEqual([]);
+  });
+
   it("returns events in time order", async () => {
     respondWith([
       { eventDate: "2026-08-15T10:33:00Z", qualifier: "EXTREMA_FLOOD", value: 5 },

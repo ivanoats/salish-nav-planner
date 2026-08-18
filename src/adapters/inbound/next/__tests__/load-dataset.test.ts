@@ -38,7 +38,7 @@ const givenFiles = (over: Record<string, unknown | null> = {}) => {
   };
 
   readFileMock.mockImplementation((path: unknown) => {
-    const name = String(path).split("/").pop() ?? "";
+    const name = String(path).split(/[/\\]/).pop() ?? "";
     const value = files[name];
     if (value === null || value === undefined) return Promise.reject(enoent());
     return Promise.resolve(JSON.stringify(value));
