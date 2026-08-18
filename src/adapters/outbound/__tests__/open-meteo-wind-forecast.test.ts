@@ -4,10 +4,17 @@ import type { WindZone } from "@/domain/wind-zone";
 
 const TODAY = "2026-08-15";
 
-const zones: WindZone[] = [
-  { id: "san-juans", name: "San Juan Islands", lat: 48.6, lon: -122.95 },
-  { id: "georgia-south", name: "Southern Strait of Georgia", lat: 49.1, lon: -123.5 },
-];
+// Named rather than indexed out of the array, so a single-zone case
+// needs no non-null assertion to reach the first element.
+const sanJuans: WindZone = { id: "san-juans", name: "San Juan Islands", lat: 48.6, lon: -122.95 };
+const georgiaSouth: WindZone = {
+  id: "georgia-south",
+  name: "Southern Strait of Georgia",
+  lat: 49.1,
+  lon: -123.5,
+};
+
+const zones: WindZone[] = [sanJuans, georgiaSouth];
 
 const daily = (dates: string[], overrides: Record<string, unknown> = {}) => ({
   daily: {
@@ -53,7 +60,7 @@ describe("OpenMeteoWindForecast", () => {
     respondWith(daily([TODAY]));
 
     const result = await provider().forecast({
-      zones: [zones[0]!],
+      zones: [sanJuans],
       startDate: TODAY,
       days: 1,
     });
@@ -65,7 +72,7 @@ describe("OpenMeteoWindForecast", () => {
   it("carries the model's values through unrounded", async () => {
     respondWith([daily([TODAY])]);
 
-    const [zone] = await provider().forecast({ zones: [zones[0]!], startDate: TODAY, days: 1 });
+    const [zone] = await provider().forecast({ zones: [sanJuans], startDate: TODAY, days: 1 });
 
     expect(zone?.days[0]).toMatchObject({
       date: TODAY,
@@ -80,7 +87,7 @@ describe("OpenMeteoWindForecast", () => {
   it("treats a missing gust as a steady wind, not a lull", async () => {
     respondWith([daily([TODAY], { wind_gusts_10m_max: [null] })]);
 
-    const [zone] = await provider().forecast({ zones: [zones[0]!], startDate: TODAY, days: 1 });
+    const [zone] = await provider().forecast({ zones: [sanJuans], startDate: TODAY, days: 1 });
 
     expect(zone?.days[0]?.gustKnots).toBe(12);
   });
@@ -88,7 +95,7 @@ describe("OpenMeteoWindForecast", () => {
   it("drops a day with no wind direction rather than guessing one", async () => {
     respondWith([daily([TODAY, "2026-08-16"], { wind_direction_10m_dominant: [null, 225] })]);
 
-    const [zone] = await provider().forecast({ zones: [zones[0]!], startDate: TODAY, days: 2 });
+    const [zone] = await provider().forecast({ zones: [sanJuans], startDate: TODAY, days: 2 });
 
     expect(zone?.days.map((d) => d.date)).toEqual(["2026-08-16"]);
   });
@@ -96,7 +103,7 @@ describe("OpenMeteoWindForecast", () => {
   it("asks for knots, so nothing downstream has to convert", async () => {
     const fetchMock = respondWith([daily([TODAY])]);
 
-    await provider().forecast({ zones: [zones[0]!], startDate: TODAY, days: 1 });
+    await provider().forecast({ zones: [sanJuans], startDate: TODAY, days: 1 });
 
     const url = new URL(String(fetchMock.mock.calls[0]?.[0]));
     expect(url.searchParams.get("wind_speed_unit")).toBe("kn");
@@ -118,7 +125,7 @@ describe("OpenMeteoWindForecast", () => {
 
     // Left today, still sailing on the 17th: the days already gone have
     // no forecast, but the remaining ones do.
-    await provider().forecast({ zones: [zones[0]!], startDate: "2026-08-13", days: 5 });
+    await provider().forecast({ zones: [sanJuans], startDate: "2026-08-13", days: 5 });
 
     const url = new URL(String(fetchMock.mock.calls[0]?.[0]));
     expect(url.searchParams.get("start_date")).toBe(TODAY);
@@ -129,7 +136,7 @@ describe("OpenMeteoWindForecast", () => {
     const fetchMock = respondWith([daily([TODAY])]);
 
     const result = await provider().forecast({
-      zones: [zones[0]!],
+      zones: [sanJuans],
       startDate: "2026-08-01",
       days: 3,
     });
@@ -141,7 +148,7 @@ describe("OpenMeteoWindForecast", () => {
   it("clamps the end date to the model's horizon", async () => {
     const fetchMock = respondWith([daily([TODAY])]);
 
-    await provider().forecast({ zones: [zones[0]!], startDate: TODAY, days: 60 });
+    await provider().forecast({ zones: [sanJuans], startDate: TODAY, days: 60 });
 
     const url = new URL(String(fetchMock.mock.calls[0]?.[0]));
     // 16-day horizon counting today, so the 15th plus 15 days.
@@ -167,7 +174,7 @@ describe("OpenMeteoWindForecast", () => {
     respondWith({}, false, 429);
 
     await expect(
-      provider().forecast({ zones: [zones[0]!], startDate: TODAY, days: 1 })
+      provider().forecast({ zones: [sanJuans], startDate: TODAY, days: 1 })
     ).rejects.toThrow(/429/);
   });
 

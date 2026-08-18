@@ -1,0 +1,31 @@
+---
+references:
+  - "File: /src/components/use-trip-plan.ts"
+generationTime: 2026-08-18T14:56:44.856Z
+---
+flowchart TD
+    A(["Start useTripPlan(composition)"]) --> B["Initialize React state"]
+    B --> C["Clamp user inputs and derive distance range"]
+    B --> D["Fetch wind field using start date and trip days"]
+    B --> E["Map location slugs to coordinates"]
+    D --> F{"Wind-aware and wind data available?"}
+    E --> F
+    F -->|Yes| G["Create weather-aware planner configuration"]
+    F -->|No| H["Use undefined weather configuration"]
+    G --> I["Resolve round-trip or custom destination"]
+    H --> I
+    C --> I
+    I --> J{"Start slug selected?"}
+    J -->|No| K["Set trip request to null and trip days to empty"]
+    J -->|Yes| L["Build trip request and call composition.planTrip()"]
+    K --> M["Build schedule request"]
+    L --> M
+    M --> N["Iterate pass transits, collect unique pass IDs, and cap at 24"]
+    M --> O["Calculate current prediction window with one-day padding"]
+    N --> P["Fetch currents for selected passes"]
+    O --> P
+    P --> Q["Call composition.dayConditions() with wind and currents"]
+    Q --> R["Iterate trip days to derive stop slugs and total nautical miles"]
+    R --> S["Return TripPlan state, statuses, results, and callbacks"]
+    S -.-> T[["Callbacks clamp values, prune pins, cycle candidates, and update state"]]
+    T --> A
