@@ -332,8 +332,14 @@ describe("useTripPlan", () => {
       planned(2, crowded);
 
       const [passIds] = usePassCurrentsMock.mock.calls.at(-1) ?? [];
-      expect((passIds as string[]).length).toBeLessThanOrEqual(24);
-      expect(new Set(passIds as string[]).size).toBe((passIds as string[]).length);
+      expect(Array.isArray(passIds)).toBe(true);
+      const ids = passIds as readonly string[];
+
+      // Exactly 24, not merely "no more than": with thirty passes on the
+      // leg, an at-most assertion would still pass if detection silently
+      // found three, which is the failure this test exists to catch.
+      expect(ids).toHaveLength(24);
+      expect(new Set(ids).size).toBe(24);
     });
 
     it("reports whether a forecast actually arrived", () => {
