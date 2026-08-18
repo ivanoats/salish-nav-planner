@@ -42,7 +42,17 @@ const EVENT_TYPES: Record<string, CurrentEventType> = {
  * for GMT and this reads it as such. Requesting local time instead would
  * mean re-deriving the station's DST rules to get back to an instant.
  */
+const NOAA_TIME = /^\d{4}-\d{2}-\d{2} \d{2}:\d{2}$/;
+
 const toEpochMs = (time: string): number | null => {
+  // The shape is checked before parsing because V8's fallback parser is
+  // lenient to the point of being dangerous here: it reads the garbage
+  // "notTa date:00Z" as the year 2000 rather than NaN. One malformed row
+  // would then plant an event a quarter-century away, and since the
+  // interpolation below brackets a time between two events, that single
+  // row would corrupt every prediction for the pass rather than being
+  // skipped as unreadable.
+  if (!NOAA_TIME.test(time)) return null;
   const parsed = Date.parse(`${time.replace(" ", "T")}:00Z`);
   return Number.isNaN(parsed) ? null : parsed;
 };

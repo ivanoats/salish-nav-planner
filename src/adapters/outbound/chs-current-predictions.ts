@@ -15,6 +15,8 @@ interface IwlsEvent {
   readonly value?: number;
 }
 
+const IWLS_TIMESTAMP = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}/;
+
 const EVENT_TYPES: Record<string, CurrentEventType> = {
   SLACK: "slack",
   EXTREMA_FLOOD: "maxFlood",
@@ -55,6 +57,12 @@ export class ChsCurrentPredictions implements CurrentPredictionsProvider {
       const type = EVENT_TYPES[entry.qualifier ?? ""];
       if (type === undefined || entry.eventDate === undefined) continue;
 
+      // Shape-checked before parsing: Date.parse accepts a truncated
+      // "2026-08" as the first of the month, so a half-written field
+      // would become a plausible-looking wrong slack time rather than
+      // being rejected. Outright garbage already yields NaN; this covers
+      // the partial dates that do not.
+      if (!IWLS_TIMESTAMP.test(entry.eventDate)) continue;
       const atMs = Date.parse(entry.eventDate);
       if (Number.isNaN(atMs)) continue;
 
