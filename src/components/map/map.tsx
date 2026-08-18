@@ -91,7 +91,10 @@ export function MapView({
   const [styleLoaded, setStyleLoaded] = useState(false);
 
   useEffect(() => {
-    if (containerRef.current === null || mapRef.current !== null) return;
+    // `undefined` rather than a bare `return`, so this path and the cleanup
+    // returned below agree about returning a value. Not `null`: React checks
+    // for a function and warns on anything else it is handed.
+    if (containerRef.current === null || mapRef.current !== null) return undefined;
     ensureWorkerUrl();
     ensurePmtilesProtocol();
 
