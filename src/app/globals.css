@@ -6,3 +6,27 @@ body {
   max-width: 100vw;
   overflow-x: hidden;
 }
+
+@media print {
+  /* Show sidebar at full width and suppress the map */
+  [data-print-sidebar] {
+    width: 100% !important;
+    border-right: none !important;
+    overflow: visible !important;
+    max-height: none !important;
+  }
+
+  [data-print-map] {
+    display: none !important;
+  }
+
+  /* Hide interactive controls that are useless on paper */
+  [data-print-hide] {
+    display: none !important;
+  }
+
+  /* Keep the print button itself off the printed page */
+  [data-print-button] {
+    display: none !important;
+  }
+}

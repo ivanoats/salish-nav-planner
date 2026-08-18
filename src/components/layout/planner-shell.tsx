@@ -8,6 +8,7 @@ import { RouteSummaryPanel } from "@/components/panels/route-summary-panel";
 import { TripControls } from "@/components/panels/trip-controls";
 import { DayItinerary } from "@/components/panels/day-itinerary";
 import { MapApp } from "@/components/map/map-app";
+import { PrintButton } from "@/components/panels/print-button";
 import { useTripPlan } from "@/components/use-trip-plan";
 import type { Location, Waypoint } from "@/domain/location";
 import type { Obstruction } from "@/domain/obstruction";
@@ -71,6 +72,7 @@ export function PlannerShell({
       })}
     >
       <div
+        data-print-sidebar
         className={css({
           width: { base: "full", md: "96" },
           flexShrink: 0,
@@ -90,7 +92,8 @@ export function PlannerShell({
           </p>
         </div>
 
-        <TripControls
+        <div data-print-hide>
+          <TripControls
           days={trip.days}
           minHours={trip.minHours}
           maxHours={trip.maxHours}
@@ -142,6 +145,7 @@ export function PlannerShell({
             No known route between these locations yet.
           </p>
         ) : null}
+        </div>
 
         <DayItinerary
           tripDays={trip.tripDays}
@@ -170,9 +174,11 @@ export function PlannerShell({
             obstructionsFor={composition.obstructionsFor}
           />
         ) : null}
+
+        {dayRoutes.length > 0 ? <PrintButton /> : null}
       </div>
 
-      <div className={css({ flex: "1", minHeight: { base: "80", md: "auto" } })}>
+      <div data-print-map className={css({ flex: "1", minHeight: { base: "80", md: "auto" } })}>
         <MapApp
           locations={locations}
           waypoints={waypoints}
