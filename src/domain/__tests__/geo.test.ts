@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import {
+import { alongTrackNm,
   angleBetweenDegrees,
   bearingDegrees,
   haversineNm,
@@ -113,5 +113,25 @@ describe("polylineLengthNm", () => {
 
   it("is zero for a degenerate line", () => {
     expect(polylineLengthNm([{ lat: 48, lon: -123 }])).toBe(0);
+  });
+});
+
+describe("alongTrackNm", () => {
+  const from = { lat: 48, lon: -123 };
+  const to = { lat: 49, lon: -123 };
+
+  it("measures distance along the axis, not straight-line distance", () => {
+    // Half a degree north of `from` is 30nm up a 60nm axis, and staying
+    // 30nm along it even when the point sits well off to one side.
+    expect(alongTrackNm({ lat: 48.5, lon: -123 }, from, to)).toBeCloseTo(30, 0);
+    expect(alongTrackNm({ lat: 48.5, lon: -122.7 }, from, to)).toBeCloseTo(30, 0);
+  });
+
+  it("goes negative behind the start, which is what puts a leg in order", () => {
+    expect(alongTrackNm({ lat: 47.5, lon: -123 }, from, to)).toBeCloseTo(-30, 0);
+  });
+
+  it("ties every point on a zero-length leg, leaving a stable sort alone", () => {
+    expect(alongTrackNm({ lat: 48.5, lon: -123 }, from, from)).toBe(0);
   });
 });

@@ -16,4 +16,6 @@ export interface Waypoint extends Coordinates {
   readonly name: string;
   /** Alternate spellings/forms that should resolve to this waypoint's coordinates. */
   readonly aliases?: readonly string[];
+  /** Optional curated water corridor for route polyline generation, stored in one canonical direction. */
+  readonly corridor?: readonly Coordinates[];
 }

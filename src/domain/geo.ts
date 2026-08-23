@@ -57,6 +57,30 @@ const project = (point: Coordinates, origin: Coordinates): readonly [number, num
   return [(point.lon - origin.lon) * nmPerDegreeLon, (point.lat - origin.lat) * nmPerDegreeLat];
 };
 
+/**
+ * How far along the `from`→`to` axis a point falls, in nautical miles,
+ * measured from `from`. Negative when the point lies behind it.
+ *
+ * Exists to put a leg's via notes into travel order. The route tables
+ * name a passage the same way whichever direction you transit it, so a
+ * southbound leg can arrive with its notes listed backwards; drawing them
+ * in that order sends the line up the sound and back down again.
+ */
+export const alongTrackNm = (
+  point: Coordinates,
+  from: Coordinates,
+  to: Coordinates
+): number => {
+  const [axisX, axisY] = project(to, from);
+  const axisLength = Math.hypot(axisX, axisY);
+  // A zero-length leg has no axis to sort along, so every point ties and
+  // the caller's stable sort leaves the listed order untouched.
+  if (axisLength === 0) return 0;
+
+  const [pointX, pointY] = project(point, from);
+  return (pointX * axisX + pointY * axisY) / axisLength;
+};
+
 export interface PolylineProjection {
   /** Distance from the query point to the closest point on the line. */
   readonly offsetNm: number;
