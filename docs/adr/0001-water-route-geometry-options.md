@@ -41,14 +41,14 @@ named in `public/data/waypoints.json` such as Deception Pass, Swinomish
 Channel, Port Townsend Canal, Active Pass, Dodd Narrows, and Seymour
 Narrows.
 
-**Pros**
+#### Option A pros
 
 - Smallest change to the current architecture.
 - Stays TypeScript-native with no new runtime service.
 - Improves the routes users notice most quickly.
 - Keeps the same route graph, wind ranking, and bridge-clearance logic.
 
-**Cons**
+#### Option A cons
 
 - Manual data curation.
 - Only improves passages we explicitly map.
@@ -60,13 +60,13 @@ Generate water-following polylines for each edge during dataset
 preparation, then store those coordinates alongside the existing edge
 distance and timing data.
 
-**Pros**
+#### Option B pros
 
 - Best long-term accuracy without adding runtime latency.
 - Fits the current "prepare data once, read it at runtime" model.
 - Could improve both route display and geometry-based obstruction checks.
 
-**Cons**
+#### Option B cons
 
 - More engineering work up front.
 - Needs a trustworthy water dataset and manual QA for tricky passages.
@@ -79,14 +79,14 @@ but its bundled network is aimed at global shipping lanes, not narrow
 inland channels like the Salish Sea. It also adds a Python dependency to
 an otherwise Node/TypeScript project.
 
-**Pros**
+#### Option C pros
 
 - Already solves shortest-path routing on a water network.
 - Emits GeoJSON directly.
 - Could be useful as inspiration for an offline tool or custom-network
   experiment.
 
-**Cons**
+#### Option C cons
 
 - Poor fit for this repository's runtime stack.
 - Bundled data is too coarse for Puget Sound and the Gulf Islands.
@@ -98,13 +98,13 @@ A TypeScript port such as `searoute-ts` is a better stack fit than
 `searoute-py`, but it still needs a Salish Sea-specific water network to
 be useful here.
 
-**Pros**
+#### Option D pros
 
 - Better language fit than Python.
 - Could reuse a tested pathfinding wrapper if we later build local graph
   data.
 
-**Cons**
+#### Option D cons
 
 - Does not remove the hardest part, which is building trustworthy local
   water geometry.
