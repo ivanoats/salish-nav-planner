@@ -416,6 +416,110 @@ const countComponents = (lines: readonly (readonly LonLat[])[]) => {
   return [...sizes.values()].sort((larger, smaller) => smaller - larger);
 };
 
+/**
+ * Joins corridors that pass close to one another but were never
+ * declared as connected.
+ *
+ * A skeleton written as "this branches off that" produces a tree, and a
+ * tree is the wrong shape for water. Where two channels run within sight
+ * of each other the graph has to know it, or a route between them takes
+ * the long way round: Port Ludlow sits off Admiralty Inlet, but with the
+ * Port Townsend Canal joined at its northern end only, reaching it meant
+ * running up the inlet, through the canal and back down — 47 nm for a
+ * leg the tables put at 23.5.
+ *
+ * The link itself is traced through water like everything else, so this
+ * adds no geometry that a boat could not follow.
+ */
+const linkNearbyCorridors = (
+  grid: WaterGrid,
+  built: ReadonlyMap<string, BuiltCorridor>,
+  warnings: string[],
+  log: (message: string) => void
+): { readonly id: string; readonly cells: Cell[] }[] => {
+  /** How far apart two corridors may be and still be worth joining. */
+  const GAP_LIMIT_CELLS = Math.round((3 * 1852) / CELL_METRES);
+  /** Sampling stride: a link 100 m off the ideal spot costs nothing. */
+  const STRIDE = 4;
+
+  interface Sampled {
+    readonly id: string;
+    readonly cells: Cell[];
+    readonly minCol: number;
+    readonly maxCol: number;
+    readonly minRow: number;
+    readonly maxRow: number;
+  }
+
+  const sampled: Sampled[] = [];
+  for (const corridor of built.values()) {
+    const cells: Cell[] = [];
+    for (let at = 0; at < corridor.cells.length; at += STRIDE) {
+      cells.push(corridor.cells[at] as Cell);
+    }
+    if (cells.length === 0) continue;
+    sampled.push({
+      id: corridor.spec.id,
+      cells,
+      minCol: Math.min(...cells.map((cell) => cell.col)),
+      maxCol: Math.max(...cells.map((cell) => cell.col)),
+      minRow: Math.min(...cells.map((cell) => cell.row)),
+      maxRow: Math.max(...cells.map((cell) => cell.row)),
+    });
+  }
+
+  const apart = (left: Sampled, right: Sampled) =>
+    Math.max(0, Math.max(left.minCol - right.maxCol, right.minCol - left.maxCol)) >
+      GAP_LIMIT_CELLS ||
+    Math.max(0, Math.max(left.minRow - right.maxRow, right.minRow - left.maxRow)) >
+      GAP_LIMIT_CELLS;
+
+  const links: { id: string; cells: Cell[] }[] = [];
+  let considered = 0;
+
+  for (let first = 0; first < sampled.length; first++) {
+    for (let second = first + 1; second < sampled.length; second++) {
+      const left = sampled[first] as Sampled;
+      const right = sampled[second] as Sampled;
+      // Bounding boxes settle almost every pair without touching a cell.
+      if (apart(left, right)) continue;
+      considered++;
+
+      let bestGap = Number.POSITIVE_INFINITY;
+      let from: Cell | null = null;
+      let to: Cell | null = null;
+      for (const leftCell of left.cells) {
+        for (const rightCell of right.cells) {
+          const gap = Math.hypot(leftCell.col - rightCell.col, leftCell.row - rightCell.row);
+          if (gap < bestGap) {
+            bestGap = gap;
+            from = leftCell;
+            to = rightCell;
+          }
+        }
+      }
+      // Already touching: the declared join covers it.
+      if (from === null || to === null || bestGap <= 2 || bestGap > GAP_LIMIT_CELLS) continue;
+
+      const parent = built.get(left.id);
+      const child = built.get(right.id);
+      if (parent === undefined || child === undefined) continue;
+
+      const line = routeThroughWater(grid, from, to, { margin: 200 });
+      if (line === null) {
+        warnings.push(`link ${left.id} <-> ${right.id}: no water route between them`);
+        continue;
+      }
+      parent.junctions.add(parent.cells.findIndex((cell) => cell.col === from.col && cell.row === from.row));
+      child.junctions.add(child.cells.findIndex((cell) => cell.col === to.col && cell.row === to.row));
+      links.push({ id: `link-${left.id}-${right.id}`, cells: line });
+    }
+  }
+
+  log(`  ${considered} corridor pairs within reach, ${links.length} links added`);
+  return links;
+};
+
 const main = () => {
   const log = (message: string) => console.log(message);
   const started = Date.now();
@@ -550,6 +654,23 @@ const main = () => {
     }
   };
   traceCorridors();
+
+  log("\njoining corridors that run close to one another");
+  for (const link of linkNearbyCorridors(grid, built, warnings, log)) {
+    built.set(link.id, {
+      spec: {
+        id: link.id,
+        name: "Open water link",
+        corridorClass: "secondary",
+        note: "Generated: open water joining two named channels that pass close by.",
+        path: [],
+      },
+      cells: link.cells,
+      junctions: new Set<number>([0, link.cells.length - 1]),
+      passIds: new Set<string>(),
+      obstructionIds: new Set<string>(),
+    });
+  }
 
 
   // Spurs: every harbour finds its own way out to the network.
