@@ -22,7 +22,17 @@ test_patterns = [
     plugins = ["react"]
     # The app is browser code; scripts/ is Node CLI tooling that prints
     # its progress to stdout. Without naming both, every console call in
-    # a build script is reported as browser debug output left behind.
+    # a build script is reported as browser debug output left behind —
+    # 26 of them the day the mesh tooling landed.
+    #
+    # The trade this makes: `environment` is per-analyzer, not per-path,
+    # so there is no way to say "browser under src/, Node under
+    # scripts/". Naming nodejs stops JS-0002 (no console in browser code)
+    # firing anywhere, app code included. That rule currently has one
+    # call to catch — the deliberate console.warn in load-dataset.ts —
+    # so the cost is small, but it is a cost. If console statements start
+    # appearing in components, scope the rule in the DeepSource dashboard
+    # rather than assuming this file still guards it.
     environment = [
       "browser",
       "nodejs"
