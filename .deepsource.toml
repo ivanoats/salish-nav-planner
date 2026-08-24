@@ -20,3 +20,10 @@ test_patterns = [
 
   [analyzers.meta]
     plugins = ["react"]
+    # The app is browser code; scripts/ is Node CLI tooling that prints
+    # its progress to stdout. Without naming both, every console call in
+    # a build script is reported as browser debug output left behind.
+    environment = [
+      "browser",
+      "nodejs"
+    ]

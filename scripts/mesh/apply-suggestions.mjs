@@ -45,7 +45,7 @@ const metresBetween = (a, b) => {
 };
 
 const pattern =
-  /^(\S+): control point \[(-?[\d.]+), (-?[\d.]+)\] is \d+ m from any water — mid-channel is \[(-?[\d.]+), (-?[\d.]+)\]$/;
+  /^(\S+): control point \[(-?[\d.]+), (-?[\d.]+)\] is \d+ m from any water — mid-channel is \[(-?[\d.]+), (-?[\d.]+)\]$/u;
 
 const sources = new Map(FILES.map((path) => [path, readFileSync(path, "utf8")]));
 let applied = 0;

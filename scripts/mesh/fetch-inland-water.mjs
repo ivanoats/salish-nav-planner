@@ -77,13 +77,13 @@ const main = async () => {
     }
     const [s, w, n, e] = area.bbox;
     const query =
-      `[out:json][timeout:180];` +
-      `(` +
+      "[out:json][timeout:180];" +
+      "(" +
       `way["natural"="water"](${s},${w},${n},${e});` +
       `way["waterway"="riverbank"](${s},${w},${n},${e});` +
       `relation["natural"="water"](${s},${w},${n},${e});` +
-      `);` +
-      `out geom;`;
+      ");" +
+      "out geom;";
 
     let saved = false;
     for (let attempt = 0; attempt < 6 && !saved; attempt++) {

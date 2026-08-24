@@ -53,6 +53,9 @@ export const CELL_METRES = 80;
 const METRES_PER_DEGREE_LAT = 111_320;
 const toRadians = (degrees: number) => (degrees * Math.PI) / 180;
 
+/** Default for callers that do not want the build's progress output. */
+const logNothing = (): void => undefined;
+
 export interface WaterGrid {
   readonly cols: number;
   readonly rows: number;
@@ -165,7 +168,7 @@ export const buildWaterGrid = (options: {
   readonly mustBeDry: readonly (readonly [number, number])[];
   readonly log?: (message: string) => void;
 }): WaterGrid => {
-  const log = options.log ?? (() => {});
+  const log = options.log ?? logNothing;
   const { dLat, dLon, cols, rows } = buildGeometry(REGION);
   log(`grid ${cols} x ${rows} = ${((cols * rows) / 1e6).toFixed(1)}M cells @ ${CELL_METRES} m`);
 

@@ -45,11 +45,11 @@ const compactWays = (elements) => {
 
 const fetchBox = async (south, west, north, east) => {
   const query =
-    `[out:json][timeout:180];` +
+    "[out:json][timeout:180];" +
     `way["natural"="coastline"](${south},${west},${north},${east});` +
-    `out geom;`;
+    "out geom;";
 
-  let lastError;
+  let lastError = null;
   for (let attempt = 0; attempt < 9; attempt++) {
     const endpoint = ENDPOINTS[attempt % ENDPOINTS.length];
     try {

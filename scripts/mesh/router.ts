@@ -266,32 +266,6 @@ export interface RouteOptions {
   readonly maxExpansions?: number;
 }
 
-/**
- * Traces water between two cells, returning the cells the track passes
- * through, or null when they are not connected inside the window.
- *
- * Searching a window rather than the whole 80-million-cell grid is what
- * keeps this fast enough to run a few hundred times; the window grows
- * and the search retries when a leg needs to detour further than the
- * straight line between its ends suggested.
- */
-export const routeThroughWater = (
-  grid: WaterGrid,
-  start: Cell,
-  goal: Cell,
-  options: RouteOptions = {}
-): Cell[] | null => {
-  const spanCols = Math.abs(goal.col - start.col);
-  const spanRows = Math.abs(goal.row - start.row);
-  let margin = options.margin ?? Math.max(90, Math.round(0.45 * Math.max(spanCols, spanRows)));
-
-  for (let attempt = 0; attempt < 4; attempt++, margin *= 2) {
-    const path = searchWindow(grid, start, goal, margin, options.maxExpansions ?? 40_000_000);
-    if (path !== null) return path;
-  }
-  return null;
-};
-
 const searchWindow = (
   grid: WaterGrid,
   start: Cell,
@@ -353,6 +327,32 @@ const searchWindow = (
     if (index === startLocal) break;
   }
   return path.reverse();
+};
+
+/**
+ * Traces water between two cells, returning the cells the track passes
+ * through, or null when they are not connected inside the window.
+ *
+ * Searching a window rather than the whole 80-million-cell grid is what
+ * keeps this fast enough to run a few hundred times; the window grows
+ * and the search retries when a leg needs to detour further than the
+ * straight line between its ends suggested.
+ */
+export const routeThroughWater = (
+  grid: WaterGrid,
+  start: Cell,
+  goal: Cell,
+  options: RouteOptions = {}
+): Cell[] | null => {
+  const spanCols = Math.abs(goal.col - start.col);
+  const spanRows = Math.abs(goal.row - start.row);
+  let margin = options.margin ?? Math.max(90, Math.round(0.45 * Math.max(spanCols, spanRows)));
+
+  for (let attempt = 0; attempt < 4; attempt++, margin *= 2) {
+    const path = searchWindow(grid, start, goal, margin, options.maxExpansions ?? 40_000_000);
+    if (path !== null) return path;
+  }
+  return null;
 };
 
 /**
@@ -453,15 +453,15 @@ export const stringPullThroughWater = (
 ): Cell[] => {
   if (cells.length <= 2) return [...cells];
 
-  const clearOfLand = (a: Cell, b: Cell): boolean => {
+  const clearOfLand = (from: Cell, to: Cell): boolean => {
     // Twice per cell. Sampling once per cell lets a leg clip the corner
     // of a headland between samples, which then shows up in the build's
     // land check as a handful of dry points.
-    const steps = 2 * Math.max(Math.abs(b.col - a.col), Math.abs(b.row - a.row));
+    const steps = 2 * Math.max(Math.abs(to.col - from.col), Math.abs(to.row - from.row));
     for (let step = 0; step <= steps; step++) {
-      const t = steps === 0 ? 0 : step / steps;
-      const col = Math.round(a.col + t * (b.col - a.col));
-      const row = Math.round(a.row + t * (b.row - a.row));
+      const along = steps === 0 ? 0 : step / steps;
+      const col = Math.round(from.col + along * (to.col - from.col));
+      const row = Math.round(from.row + along * (to.row - from.row));
       if (grid.water[row * grid.cols + col] !== 1) return false;
     }
     return true;
@@ -482,20 +482,21 @@ export const stringPullThroughWater = (
   };
 
   const strays = (from: number, to: number): boolean => {
-    const a = cells[from] as Cell;
-    const b = cells[to] as Cell;
-    const dx = b.col - a.col;
-    const dy = b.row - a.row;
+    const anchorCell = cells[from] as Cell;
+    const reachCell = cells[to] as Cell;
+    const dx = reachCell.col - anchorCell.col;
+    const dy = reachCell.row - anchorCell.row;
     const lengthSquared = dx * dx + dy * dy;
     if (lengthSquared === 0) return false;
     const limit = allowance(from, to);
     for (let i = from + 1; i < to; i++) {
       const point = cells[i] as Cell;
-      const t = ((point.col - a.col) * dx + (point.row - a.row) * dy) / lengthSquared;
-      const clamped = Math.max(0, Math.min(1, t));
+      const projected =
+        ((point.col - anchorCell.col) * dx + (point.row - anchorCell.row) * dy) / lengthSquared;
+      const clamped = Math.max(0, Math.min(1, projected));
       const offset = Math.hypot(
-        point.col - (a.col + clamped * dx),
-        point.row - (a.row + clamped * dy)
+        point.col - (anchorCell.col + clamped * dx),
+        point.row - (anchorCell.row + clamped * dy)
       );
       if (offset > limit) return true;
     }

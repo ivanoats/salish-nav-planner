@@ -731,14 +731,14 @@ const main = () => {
   const dryRun = (line: readonly LonLat[], skipLastSegment: boolean): number => {
     let dry = 0;
     const limit = skipLastSegment ? line.length - 2 : line.length - 1;
-    for (let i = 0; i < limit; i++) {
-      const a = line[i] as LonLat;
-      const b = line[i + 1] as LonLat;
-      const steps = Math.max(1, Math.ceil((haversineNm(a, b) * 1852) / (CELL_METRES / 2)));
+    for (let index = 0; index < limit; index++) {
+      const from = line[index] as LonLat;
+      const to = line[index + 1] as LonLat;
+      const steps = Math.max(1, Math.ceil((haversineNm(from, to) * 1852) / (CELL_METRES / 2)));
       for (let step = 0; step <= steps; step++) {
-        const t = step / steps;
-        const col = grid.col(a[0] + t * (b[0] - a[0]));
-        const row = grid.row(a[1] + t * (b[1] - a[1]));
+        const along = step / steps;
+        const col = grid.col(from[0] + along * (to[0] - from[0]));
+        const row = grid.row(from[1] + along * (to[1] - from[1]));
         if (col < 0 || col >= grid.cols || row < 0 || row >= grid.rows) continue;
         if (grid.water[row * grid.cols + col] !== 1) dry++;
       }
@@ -805,10 +805,10 @@ const main = () => {
 
   log(`\n${warnings.length} warnings (scripts/mesh/.build-warnings.txt)`);
   for (const warning of warnings.slice(0, 60)) log(`  ! ${warning}`);
+  const megabytes = (JSON.stringify(collection).length / 1e6).toFixed(2);
+  const seconds = ((Date.now() - started) / 1000).toFixed(1);
   log(
-    `\nwrote ${OUT_PATH} — ${features.length} features, ` +
-      `${(JSON.stringify(collection).length / 1e6).toFixed(2)} MB, ` +
-      `${((Date.now() - started) / 1000).toFixed(1)}s`
+    `\nwrote ${OUT_PATH} — ${features.length} features, ${megabytes} MB, ${seconds}s`
   );
 };
 
