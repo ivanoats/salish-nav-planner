@@ -94,6 +94,75 @@ class MinHeap {
   }
 }
 
+/**
+ * State the two searches below share: the window they are confined to,
+ * the running scores, and the frontier.
+ */
+interface SearchState {
+  readonly x0: number;
+  readonly x1: number;
+  readonly y0: number;
+  readonly y1: number;
+  readonly width: number;
+  readonly gScore: Float64Array;
+  readonly cameFrom: Int32Array;
+  readonly closed: Uint8Array;
+  readonly open: MinHeap;
+  /** Added to the score when ordering the frontier. Zero for Dijkstra. */
+  readonly heuristic: (local: number) => number;
+}
+
+/**
+ * Relaxes the eight neighbours of one expanded cell.
+ *
+ * The A* below and the Dijkstra below it differ only in where they stop
+ * and how they order the frontier; the step itself — stay in the window,
+ * stay in the water, do not cut a corner between two touching rocks, and
+ * pay the mid-channel weight — is the same search either way, and is
+ * worth having in exactly one place.
+ */
+const relaxNeighbours = (
+  grid: WaterGrid,
+  state: SearchState,
+  current: number,
+  col: number,
+  row: number
+) => {
+  const base = state.gScore[current] as number;
+  const local = (c: number, r: number) => (r - state.y0) * state.width + (c - state.x0);
+
+  for (let dy = -1; dy <= 1; dy++) {
+    for (let dx = -1; dx <= 1; dx++) {
+      if (dx === 0 && dy === 0) continue;
+      const nextCol = col + dx;
+      const nextRow = row + dy;
+      if (nextCol < state.x0 || nextCol > state.x1) continue;
+      if (nextRow < state.y0 || nextRow > state.y1) continue;
+      const globalIndex = nextRow * grid.cols + nextCol;
+      if (grid.water[globalIndex] !== 1) continue;
+
+      const diagonal = dx !== 0 && dy !== 0;
+      // No corner-cutting: both orthogonal neighbours must be water, or
+      // the track slips diagonally between two touching rocks.
+      if (diagonal) {
+        if (grid.water[row * grid.cols + nextCol] !== 1) continue;
+        if (grid.water[nextRow * grid.cols + col] !== 1) continue;
+      }
+
+      const nextLocal = local(nextCol, nextRow);
+      if (state.closed[nextLocal] === 1) continue;
+
+      const distance = (diagonal ? DIAGONAL : 1) * CELL_METRES;
+      const tentative = base + distance * stepWeight(grid.clearance[globalIndex] as number);
+      if (tentative < (state.gScore[nextLocal] as number)) {
+        state.gScore[nextLocal] = tentative;
+        state.cameFrom[nextLocal] = current;
+        state.open.push(tentative + state.heuristic(nextLocal), nextLocal);
+      }
+    }
+  }
+};
+
 export interface Cell {
   readonly col: number;
   readonly row: number;
@@ -255,6 +324,7 @@ const searchWindow = (
   };
 
   const open = new MinHeap(1 << 16);
+  const state: SearchState = { x0, x1, y0, y1, width, gScore, cameFrom, closed, open, heuristic };
   gScore[startLocal] = 0;
   open.push(heuristic(startLocal), startLocal);
 
@@ -270,34 +340,7 @@ const searchWindow = (
     const localRow = (current - localCol) / width;
     const col = localCol + x0;
     const row = localRow + y0;
-    const base = gScore[current] as number;
-
-    for (let dy = -1; dy <= 1; dy++) {
-      for (let dx = -1; dx <= 1; dx++) {
-        if (dx === 0 && dy === 0) continue;
-        const nextCol = col + dx;
-        const nextRow = row + dy;
-        if (nextCol < x0 || nextCol > x1 || nextRow < y0 || nextRow > y1) continue;
-        const globalIndex = nextRow * grid.cols + nextCol;
-        if (grid.water[globalIndex] !== 1) continue;
-        // No corner-cutting: both orthogonal neighbours must be water,
-        // or the track slips diagonally between two touching rocks.
-        if (dx !== 0 && dy !== 0) {
-          if (grid.water[row * grid.cols + nextCol] !== 1) continue;
-          if (grid.water[nextRow * grid.cols + col] !== 1) continue;
-        }
-        const nextLocal = local(nextCol, nextRow);
-        if (closed[nextLocal] === 1) continue;
-
-        const distance = (dx !== 0 && dy !== 0 ? DIAGONAL : 1) * CELL_METRES;
-        const tentative = base + distance * stepWeight(grid.clearance[globalIndex] as number);
-        if (tentative < (gScore[nextLocal] as number)) {
-          gScore[nextLocal] = tentative;
-          cameFrom[nextLocal] = current;
-          open.push(tentative + heuristic(nextLocal), nextLocal);
-        }
-      }
-    }
+    relaxNeighbours(grid, state, current, col, row);
   }
 
   if (closed[goalLocal] !== 1) return null;
@@ -340,6 +383,20 @@ export const routeToNearestTarget = (
     const local = (col: number, row: number) => (row - y0) * width + (col - x0);
 
     const open = new MinHeap(1 << 14);
+    // No heuristic: this search does not know where it is going, only
+    // what it is looking for, so it is a plain Dijkstra.
+    const state: SearchState = {
+      x0,
+      x1,
+      y0,
+      y1,
+      width,
+      gScore,
+      cameFrom,
+      closed,
+      open,
+      heuristic: () => 0,
+    };
     const startLocal = local(start.col, start.row);
     gScore[startLocal] = 0;
     open.push(0, startLocal);
@@ -360,31 +417,7 @@ export const routeToNearestTarget = (
         found = current;
         break;
       }
-      const base = gScore[current] as number;
-
-      for (let dy = -1; dy <= 1; dy++) {
-        for (let dx = -1; dx <= 1; dx++) {
-          if (dx === 0 && dy === 0) continue;
-          const nextCol = col + dx;
-          const nextRow = row + dy;
-          if (nextCol < x0 || nextCol > x1 || nextRow < y0 || nextRow > y1) continue;
-          const globalIndex = nextRow * grid.cols + nextCol;
-          if (grid.water[globalIndex] !== 1) continue;
-          if (dx !== 0 && dy !== 0) {
-            if (grid.water[row * grid.cols + nextCol] !== 1) continue;
-            if (grid.water[nextRow * grid.cols + col] !== 1) continue;
-          }
-          const nextLocal = local(nextCol, nextRow);
-          if (closed[nextLocal] === 1) continue;
-          const distance = (dx !== 0 && dy !== 0 ? DIAGONAL : 1) * CELL_METRES;
-          const tentative = base + distance * stepWeight(grid.clearance[globalIndex] as number);
-          if (tentative < (gScore[nextLocal] as number)) {
-            gScore[nextLocal] = tentative;
-            cameFrom[nextLocal] = current;
-            open.push(tentative, nextLocal);
-          }
-        }
-      }
+      relaxNeighbours(grid, state, current, col, row);
     }
 
     if (found === -1) continue;

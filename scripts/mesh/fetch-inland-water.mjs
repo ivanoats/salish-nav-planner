@@ -39,24 +39,31 @@ const flatten = (geometry) => {
  * relation members leaves its outline open — which lets the fill escape
  * the lake and swallow the county.
  */
-const compact = (elements) => {
-  const ways = [];
-  let syntheticId = -1;
-  for (const element of elements) {
-    if (element.type === "way" && Array.isArray(element.geometry)) {
-      const flat = flatten(element.geometry);
-      if (flat.length >= 6) ways.push({ id: element.id, flat });
-      continue;
-    }
-    if (element.type === "relation" && Array.isArray(element.members)) {
-      for (const member of element.members) {
-        if (!Array.isArray(member.geometry)) continue;
-        const flat = flatten(member.geometry);
-        if (flat.length >= 4) ways.push({ id: syntheticId--, flat });
-      }
-    }
+const ringFromWay = (element) => {
+  if (element.type !== "way" || !Array.isArray(element.geometry)) return [];
+  const flat = flatten(element.geometry);
+  return flat.length >= 6 ? [{ id: element.id, flat }] : [];
+};
+
+const ringsFromRelation = (element, nextId) => {
+  if (element.type !== "relation" || !Array.isArray(element.members)) return [];
+  const rings = [];
+  for (const member of element.members) {
+    if (!Array.isArray(member.geometry)) continue;
+    const flat = flatten(member.geometry);
+    if (flat.length >= 4) rings.push({ id: nextId(), flat });
   }
-  return ways;
+  return rings;
+};
+
+const compact = (elements) => {
+  const rings = [];
+  let syntheticId = -1;
+  const nextId = () => syntheticId--;
+  for (const element of elements) {
+    rings.push(...ringFromWay(element), ...ringsFromRelation(element, nextId));
+  }
+  return rings;
 };
 
 const main = async () => {

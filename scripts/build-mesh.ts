@@ -331,8 +331,8 @@ const dressCorridor = (
     );
     for (const cell of piece) {
       const point = cellToLonLat(grid, cell);
-      const last = out[out.length - 1];
-      if (last !== undefined && last[0] === point[0] && last[1] === point[1]) continue;
+      const last = out.at(-1);
+      if (last?.[0] === point[0] && last[1] === point[1]) continue;
       out.push(point);
     }
   }
@@ -485,8 +485,8 @@ const main = () => {
     let cells: Cell[] = [];
     const append = (segment: readonly Cell[]) => {
       for (const cell of segment) {
-        const last = cells[cells.length - 1];
-        if (last !== undefined && last.col === cell.col && last.row === cell.row) continue;
+        const last = cells.at(-1);
+        if (last?.col === cell.col && last.row === cell.row) continue;
         cells.push(cell);
       }
     };
@@ -512,7 +512,7 @@ const main = () => {
         warnings.push(`${spec.id}: parent ${parentId} was not built`);
         return;
       }
-      const own = (atStart ? cells[0] : cells[cells.length - 1]) as Cell;
+      const own = (atStart ? cells[0] : cells.at(-1)) as Cell;
       const { index, cell } = nearestOnCorridor(parent, own);
       // link runs parent -> own.
       const link = routeThroughWater(grid, cell, own, { margin: 300 });
@@ -601,7 +601,7 @@ const main = () => {
     const line = stringPullThroughWater(grid, path, MAX_DEVIATION_CELLS).map((cell) =>
       cellToLonLat(grid, cell)
     );
-    const last = line[line.length - 1] as LonLat;
+    const last = line.at(-1) as LonLat;
     // How far the harbour's published position is from the last cell the
     // search could prove was water. Usually metres; occasionally a
     // kilometre or more, where the entrance is finer than the raster or
@@ -659,8 +659,8 @@ const main = () => {
         name: corridor.spec.name,
         corridorClass: corridor.spec.corridorClass,
         zone: corridor.spec.zone ?? null,
-        passIds: [...corridor.passIds].sort(),
-        obstructionIds: [...corridor.obstructionIds].sort(),
+        passIds: [...corridor.passIds].sort((a, b) => a.localeCompare(b)),
+        obstructionIds: [...corridor.obstructionIds].sort((a, b) => a.localeCompare(b)),
         lengthNm: Math.round(lengthNm(line) * 10) / 10,
         note: corridor.spec.note ?? null,
       },

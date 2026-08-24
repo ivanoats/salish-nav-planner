@@ -26,7 +26,7 @@ const ENDPOINTS = [
 
 const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 
-const tileName = (lat, lon) => `coastline_${lat}_${lon}.json`.replace(/-/g, "m");
+const tileName = (lat, lon) => `coastline_${lat}_${lon}.json`.replaceAll("-", "m");
 
 /** Overpass returns whole ways, so the same way lands in several tiles. */
 const compactWays = (elements) => {
