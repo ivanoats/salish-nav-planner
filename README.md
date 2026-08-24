@@ -371,6 +371,12 @@ Three kinds of feature, all in one `FeatureCollection`:
   Cove) or the published position is simply inland of its own shoreline.
   That last leg is drawn, not traced — treat it as a pointer at the
   harbour rather than as water.
+- **`kind: "edge"`** — a `LineString` for one leg nwcruising.net
+  publishes a direct distance for, up to 25 nm, tagged `from`, `to`,
+  `publishedNm` and the traced `lengthNm`. These are what make the mesh
+  a network rather than a tree: the named corridors describe the water a
+  navigator would name, but only the tables say which harbours are a
+  morning apart.
 - **`kind: "harbour"` / `kind: "pass"`** — `Point`s for the harbours and
   for every entry in `passes.json`, so the file stands on its own.
 
@@ -403,11 +409,15 @@ the right body of water. `scripts/build-mesh.ts` does the rest:
    entrance was lost in. A final pass discards any water that is still
    unreachable, because water a boat cannot get to is worse than none:
    a control point snaps into it and the search then has nowhere to go.
-4. An A\* search traces between consecutive control points, weighted to
+4. Each published leg up to 25 nm is traced the same way, harbour to
+   harbour. Only the short ones: local connectivity is what the network
+   lacks, and once it is there a long passage composes from short legs
+   without needing a line of its own.
+5. An A\* search traces between consecutive control points, weighted to
    stay mid-channel where there is room and to relax where there isn't —
    which is how a narrow pass ends up drawn down its middle instead of
    against one shore.
-5. Each traced track is pulled straight against the water itself: a leg
+6. Each traced track is pulled straight against the water itself: a leg
    is only accepted if every point along it is wet, and the allowance
    for straightening shrinks with the channel, so a dredged cut keeps
    its shape while open water gets a course to steer.
@@ -420,11 +430,32 @@ emitted line may cross land. And the whole mesh must come out as one
 connected component. Anything else lands in
 `scripts/mesh/.build-warnings.txt`.
 
-The current build traces all 110 corridors and all 220 spurs, crosses no
-land, and comes out as a single connected network of 2,718 vertices;
-45 of the 47 tidal passes attach to a corridor, the two that do not
-being Nakwakto Rapids and Quatsino Narrows, which no location in the
-dataset lies beyond.
+There is a fourth check, and it is the one that caught the real fault.
+`node scripts/mesh/check-distances.mjs [ratio]` walks the mesh between
+every harbour pair the tables publish a distance for and reports the
+legs that come out far longer. Nothing in the build can tell you the
+network is the wrong *shape* — every line wet, every piece joined, and
+Port Ludlow still reachable only by running up Admiralty Inlet, through
+the Port Townsend Canal and back down. 4,073 published legs say
+otherwise, and they are independent of anything the build believes. It
+also sets aside 31 rows whose published figure is shorter than a
+straight line between the two harbours, which are bad table rows rather
+than mesh faults.
+
+The current build traces 211 corridors, 968 published legs and all 220
+spurs, crosses no land, and comes out as a single connected network of
+8,189 vertices. Against the tables:
+
+| Mesh longer than published by | Legs |
+| --- | --- |
+| more than 10% | 1,514 |
+| more than 25% | 311 |
+| more than 50% | 69 |
+| more than 100% | 21 |
+
+Some overhead is expected and wanted — a corridor runs down the middle
+of the channel, and a distance table gives the rhumb line. The tail
+beyond 50% is where the network is still too sparse to be believed.
 
 Two small tools help when a corridor comes out wrong.
 `node scripts/mesh/probe.mjs lat 47.55 -123.2 -122.7` prints where the

@@ -78,6 +78,7 @@ for (const edge of edges) {
 }
 
 const worst = [];
+const impossible = [];
 let compared = 0;
 let over = 0;
 for (const [from, list] of byOrigin) {
@@ -89,6 +90,15 @@ for (const [from, list] of byOrigin) {
     if (target === undefined || !Number.isFinite(edge.nm) || edge.nm <= 0) continue;
     const meshNm = dist.get(target);
     if (meshNm === undefined) continue;
+    // A published figure below the great-circle distance is impossible,
+    // and the README already flags that some table rows are wrong. Those
+    // say nothing about the mesh, so they are counted separately rather
+    // than scored against it.
+    const straight = nm(position.get(origin), position.get(target));
+    if (edge.nm < straight * 0.98) {
+      impossible.push({ from, to: edge.to, published: edge.nm, straight });
+      continue;
+    }
     compared++;
     const ratio = meshNm / edge.nm;
     if (ratio > overBy) {
@@ -99,7 +109,11 @@ for (const [from, list] of byOrigin) {
 }
 
 worst.sort((left, right) => right.ratio - left.ratio);
-console.log(`compared ${compared} published legs; ${over} are more than ${((overBy - 1) * 100).toFixed(0)}% longer over the mesh\n`);
+console.log(
+  `compared ${compared} published legs; ${over} are more than ` +
+    `${((overBy - 1) * 100).toFixed(0)}% longer over the mesh ` +
+    `(${impossible.length} skipped: published shorter than a straight line)\n`
+);
 console.log("worst 25:");
 for (const row of worst.slice(0, 25)) {
   console.log(

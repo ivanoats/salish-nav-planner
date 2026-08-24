@@ -247,6 +247,9 @@ const cellToLonLat = (grid: WaterGrid, cell: Cell): LonLat => [
   grid.lat(cell.row),
 ];
 
+/** Longest published leg to trace its own geometry for. */
+const EDGE_CAP_NM = 25;
+
 /** How far a straightened leg may wander from the traced track, in cells. */
 const MAX_DEVIATION_CELLS = 3;
 
@@ -520,6 +523,81 @@ const linkNearbyCorridors = (
   return links;
 };
 
+/** One published harbour-to-harbour leg, traced through water. */
+interface BuiltEdge {
+  readonly from: string;
+  readonly to: string;
+  readonly publishedNm: number;
+  readonly line: LonLat[];
+}
+
+/**
+ * Traces the short legs nwcruising.net publishes a distance for.
+ *
+ * The named corridors describe the water a navigator would name; they do
+ * not, on their own, say which harbours are a morning apart. That is what
+ * the distance tables are for, and without it the network comes out as a
+ * tree — Port McNeill and Sointula sit four miles apart across Broughton
+ * Strait and were thirty apart over the mesh, because no corridor runs
+ * between them.
+ *
+ * Only the short legs are traced. Local connectivity is what the mesh
+ * lacks, and once it is there a long passage composes from short ones
+ * without needing its own line.
+ */
+const traceHarbourEdges = (
+  grid: WaterGrid,
+  locations: readonly LocationRecord[],
+  harbourCells: ReadonlyMap<string, Cell>,
+  warnings: string[],
+  log: (message: string) => void
+): BuiltEdge[] => {
+  const published = readJson<{ from: string; to: string; nm: number }[]>("edges.json");
+  const bySlug = new Map(locations.map((location) => [location.slug, location] as const));
+
+  // One entry per unordered pair, keeping the shorter published figure
+  // where the two directions disagree.
+  const pairs = new Map<string, { from: string; to: string; nm: number }>();
+  for (const edge of published) {
+    if (!harbourCells.has(edge.from) || !harbourCells.has(edge.to)) continue;
+    if (!Number.isFinite(edge.nm) || edge.nm <= 0 || edge.nm > EDGE_CAP_NM) continue;
+    const key = [edge.from, edge.to].sort((left, right) => left.localeCompare(right)).join("|");
+    const seen = pairs.get(key);
+    if (seen === undefined || edge.nm < seen.nm) {
+      pairs.set(key, { from: edge.from, to: edge.to, nm: edge.nm });
+    }
+  }
+  log(`\ntracing ${pairs.size} published legs up to ${EDGE_CAP_NM} nm`);
+
+  const edges: BuiltEdge[] = [];
+  let failed = 0;
+  for (const pair of pairs.values()) {
+    const start = harbourCells.get(pair.from) as Cell;
+    const finish = harbourCells.get(pair.to) as Cell;
+    const path = routeThroughWater(grid, start, finish);
+    if (path === null) {
+      failed++;
+      warnings.push(`edge ${pair.from} -> ${pair.to}: no water route`);
+      continue;
+    }
+    const line = stringPullThroughWater(grid, path, MAX_DEVIATION_CELLS).map((cell) =>
+      cellToLonLat(grid, cell)
+    );
+    // Terminate on the published positions, which are the harbour nodes
+    // the spurs also end on, so the graph joins up without any snapping.
+    const from = bySlug.get(pair.from) as LocationRecord;
+    const to = bySlug.get(pair.to) as LocationRecord;
+    edges.push({
+      from: pair.from,
+      to: pair.to,
+      publishedNm: pair.nm,
+      line: [[from.lon, from.lat], ...line, [to.lon, to.lat]],
+    });
+  }
+  log(`  ${edges.length} traced, ${failed} with no water route`);
+  return edges;
+};
+
 const main = () => {
   const log = (message: string) => console.log(message);
   const started = Date.now();
@@ -688,6 +766,7 @@ const main = () => {
   }
 
   const spurs: BuiltSpur[] = [];
+    const harbourCells = new Map<string, Cell>();
 
   log(`\ntracing ${locations.length} harbour spurs`);
   /** Traces one entrance spur per harbour, out to the nearest corridor. */
@@ -701,7 +780,8 @@ const main = () => {
         warnings.push(`${location.slug}: no navigable water within 7 km of its published position`);
         continue;
       }
-      const moved = haversineNm([location.lon, location.lat], cellToLonLat(grid, harbour)) * 1852;
+      harbourCells.set(location.slug, harbour);
+    const moved = haversineNm([location.lon, location.lat], cellToLonLat(grid, harbour)) * 1852;
       if (moved > 500) {
         warnings.push(
           `${location.slug}: published position is ${Math.round(moved)} m from the nearest water`
@@ -742,6 +822,7 @@ const main = () => {
     }
   };
   traceSpurs();
+  const harbourEdges = traceHarbourEdges(grid, locations, harbourCells, warnings, log);
 
   log(`  ${spurs.length}/${locations.length} spurs traced`);
 
@@ -819,6 +900,23 @@ const main = () => {
       },
     });
   }
+  for (const edge of harbourEdges) {
+    features.push({
+      type: "Feature",
+      properties: {
+        kind: "edge",
+        id: `edge-${edge.from}-${edge.to}`,
+        from: edge.from,
+        to: edge.to,
+        publishedNm: edge.publishedNm,
+        lengthNm: Math.round(lengthNm(edge.line) * 10) / 10,
+      },
+      geometry: {
+        type: "LineString",
+        coordinates: edge.line.map(([lon, lat]) => [round(lon), round(lat)]),
+      },
+    });
+  }
   for (const location of locations) {
     features.push({
       type: "Feature",
@@ -892,6 +990,7 @@ const main = () => {
   const components = countComponents([
     ...corridorLines.values(),
     ...spurs.map((spur) => spur.line),
+    ...harbourEdges.map((edge) => edge.line),
   ]);
   const stray = components.length - 1;
   log(
@@ -915,6 +1014,7 @@ const main = () => {
         "current charts.",
       corridorCount: corridorList.length,
       spurCount: spurs.length,
+      edgeCount: harbourEdges.length,
       harbourCount: locations.length,
       components: components.length,
     },
