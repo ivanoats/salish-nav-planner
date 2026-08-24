@@ -7,6 +7,9 @@ export default defineConfig({
   resolve: {
     alias: {
       "@": fileURLToPath(new URL("./src", import.meta.url)),
+      "styled-system/css": fileURLToPath(
+        new URL("./vitest.styled-system-css-stub.ts", import.meta.url)
+      ),
       "server-only": fileURLToPath(
         new URL("./vitest.server-only-stub.ts", import.meta.url)
       ),

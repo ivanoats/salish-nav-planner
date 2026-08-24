@@ -33,7 +33,9 @@ export const MIN_SPEED_KNOTS = 3;
 export const MAX_SPEED_KNOTS = 30;
 
 export const clampSpeed = (knots: number): number =>
-  Math.min(MAX_SPEED_KNOTS, Math.max(MIN_SPEED_KNOTS, knots));
+  Number.isFinite(knots)
+    ? Math.min(MAX_SPEED_KNOTS, Math.max(MIN_SPEED_KNOTS, knots))
+    : DEFAULT_SPEED_KNOTS;
 
 /**
  * How a day's destination was chosen. "endpoint" means the trip shape
