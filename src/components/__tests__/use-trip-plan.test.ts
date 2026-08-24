@@ -16,7 +16,14 @@ const { useTripPlan } = await import("../use-trip-plan");
 const { createComposition } = await import("@/composition-root");
 const { EMPTY_WIND_FIELD } = await import("@/domain/wind-field");
 const { localTimeToMs } = await import("@/domain/clock");
-const { MAX_TRIP_DAYS, MIN_DAY_HOURS, MAX_DAY_HOURS } = await import("@/domain/trip");
+const {
+  DEFAULT_SPEED_KNOTS,
+  MAX_DAY_HOURS,
+  MAX_SPEED_KNOTS,
+  MAX_TRIP_DAYS,
+  MIN_DAY_HOURS,
+  MIN_SPEED_KNOTS,
+} = await import("@/domain/trip");
 const { AIR_DRAFT_MARGIN_FEET, MAX_MAST_HEIGHT_FEET, airDraftFor } = await import(
   "@/domain/obstruction"
 );
@@ -185,6 +192,26 @@ describe("useTripPlan", () => {
 
       expect(result.current.minNm).toBe(30);
       expect(result.current.maxNm).toBe(80);
+    });
+
+    it("clamps speed to the supported range", () => {
+      const { result } = renderHook(() => useTripPlan(composition()));
+
+      act(() => result.current.setSpeedKnots(MIN_SPEED_KNOTS - 1));
+      expect(result.current.speedKnots).toBe(MIN_SPEED_KNOTS);
+
+      act(() => result.current.setSpeedKnots(MAX_SPEED_KNOTS + 1));
+      expect(result.current.speedKnots).toBe(MAX_SPEED_KNOTS);
+    });
+
+    it("uses the default speed when a cleared input produces a non-finite value", () => {
+      const { result } = renderHook(() => useTripPlan(composition()));
+
+      act(() => result.current.setSpeedKnots(Number.NaN));
+      expect(result.current.speedKnots).toBe(DEFAULT_SPEED_KNOTS);
+
+      act(() => result.current.setSpeedKnots(Number.POSITIVE_INFINITY));
+      expect(result.current.speedKnots).toBe(DEFAULT_SPEED_KNOTS);
     });
 
     it("clamps the hour window to something sailable", () => {

@@ -249,32 +249,58 @@ const validateStops = (
   return stops;
 };
 
-export const decodeSharedTrip = (
-  query: SearchParamsReader,
-  knownSlugs: ReadonlySet<string>
-): SharedTripDecodeResult => {
-  // `v` is the namespace sentinel. Generic query keys such as `date` or
-  // `start` may belong to another integration and must not trigger a warning.
-  const hasSharedTrip = query.has("v");
-  if (!hasSharedTrip) return { state: null, issues: [], hasSharedTrip: false };
+interface ParsedSharedTrip {
+  readonly days: number | null;
+  readonly minHours: number | null;
+  readonly maxHours: number | null;
+  readonly speedKnots: number | null;
+  readonly startSlug: string | null;
+  readonly firstDestinationSlug: string | null;
+  readonly startDate: IsoDate | null;
+  readonly departureMinutes: number | null;
+  readonly mastHeightFeet: number | null;
+  readonly windAware: boolean | null;
+  readonly roundTrip: boolean | null;
+  readonly customEndSlug: string | null;
+  readonly stopSlugs: string[] | null;
+  readonly pinnedDays: number[] | null;
+}
 
-  const issues: SharedTripIssue[] = [];
-  const fields = readFields(query, issues);
-  if (fields.v !== undefined && fields.v !== String(SHARED_TRIP_VERSION)) {
+interface CompleteParsedSharedTrip extends ParsedSharedTrip {
+  readonly days: number;
+  readonly minHours: number;
+  readonly maxHours: number;
+  readonly speedKnots: number;
+  readonly startSlug: string;
+  readonly firstDestinationSlug: string;
+  readonly startDate: IsoDate;
+  readonly departureMinutes: number;
+  readonly mastHeightFeet: number;
+  readonly windAware: boolean;
+  readonly roundTrip: boolean;
+  readonly stopSlugs: string[];
+  readonly pinnedDays: number[];
+}
+
+const validateVersion = (
+  value: string | undefined,
+  issues: SharedTripIssue[]
+): void => {
+  if (value !== undefined && value !== String(SHARED_TRIP_VERSION)) {
     issues.push(
       issue(
         "unsupported-version",
         "v",
-        `Shared trip version “${fields.v}” is not supported.`
+        `Shared trip version “${value}” is not supported.`
       )
     );
   }
+};
 
-  const days = parseNumber(fields.days, "days", issues, {
-    min: MIN_TRIP_DAYS,
-    max: MAX_TRIP_DAYS,
-    integer: true,
-  });
+const parseHourRange = (
+  fields: Partial<Record<SharedTripQueryKey, string>>,
+  issues: SharedTripIssue[]
+): Pick<ParsedSharedTrip, "minHours" | "maxHours"> => {
   const minHours = parseNumber(fields["min-hours"], "min-hours", issues, {
     min: MIN_DAY_HOURS,
     max: MAX_DAY_HOURS,
@@ -286,6 +312,42 @@ export const decodeSharedTrip = (
   if (minHours !== null && maxHours !== null && minHours > maxHours) {
     issues.push(issue("invalid-value", "min-hours", "Minimum hours exceed maximum hours."));
   }
+  return { minHours, maxHours };
+};
+
+const parseStartDate = (
+  value: string | undefined,
+  issues: SharedTripIssue[]
+): IsoDate | null => {
+  if (value === undefined) return null;
+  if (isIsoDate(value)) return value;
+  issues.push(issue("invalid-value", "date", "Start date is invalid."));
+  return null;
+};
+
+const parseDeparture = (
+  value: string | undefined,
+  issues: SharedTripIssue[]
+): number | null => {
+  if (value === undefined) return null;
+  const minutes = parseClock(value);
+  if (minutes === null) {
+    issues.push(issue("invalid-value", "depart", "Departure time is invalid."));
+  }
+  return minutes;
+};
+
+const parseSharedTripFields = (
+  fields: Partial<Record<SharedTripQueryKey, string>>,
+  knownSlugs: ReadonlySet<string>,
+  issues: SharedTripIssue[]
+): ParsedSharedTrip => {
+  const days = parseNumber(fields.days, "days", issues, {
+    min: MIN_TRIP_DAYS,
+    max: MAX_TRIP_DAYS,
+    integer: true,
+  });
+  const { minHours, maxHours } = parseHourRange(fields, issues);
   const speedKnots = parseNumber(fields.speed, "speed", issues, {
     min: MIN_SPEED_KNOTS,
     max: MAX_SPEED_KNOTS,
@@ -294,17 +356,8 @@ export const decodeSharedTrip = (
     min: MIN_MAST_HEIGHT_FEET,
     max: MAX_MAST_HEIGHT_FEET,
   });
-  const departureMinutes =
-    fields.depart === undefined ? null : parseClock(fields.depart);
-  if (fields.depart !== undefined && departureMinutes === null) {
-    issues.push(issue("invalid-value", "depart", "Departure time is invalid."));
-  }
-  const startDate =
-    fields.date !== undefined && isIsoDate(fields.date) ? fields.date : null;
-  if (fields.date !== undefined && startDate === null) {
-    issues.push(issue("invalid-value", "date", "Start date is invalid."));
-  }
-
+  const startDate = parseStartDate(fields.date, issues);
+  const departureMinutes = parseDeparture(fields.depart, issues);
   const windAware = parseBoolean(fields.wind, "wind", issues);
   const roundTrip = parseBoolean(fields.round, "round", issues);
   const startSlug = knownLocation(fields.start, "start", knownSlugs, issues);
@@ -327,43 +380,65 @@ export const decodeSharedTrip = (
     issues
   );
 
-  if (
-    issues.length > 0 ||
-    fields.v !== String(SHARED_TRIP_VERSION) ||
-    days === null ||
-    minHours === null ||
-    maxHours === null ||
-    speedKnots === null ||
-    startSlug === null ||
-    firstDestinationSlug === null ||
-    startDate === null ||
-    departureMinutes === null ||
-    mastHeightFeet === null ||
-    windAware === null ||
-    roundTrip === null ||
-    stopSlugs === null ||
-    pinnedDays === null
-  ) {
+  return {
+    days,
+    minHours,
+    maxHours,
+    speedKnots,
+    startSlug,
+    firstDestinationSlug,
+    startDate,
+    departureMinutes,
+    mastHeightFeet,
+    windAware,
+    roundTrip,
+    customEndSlug,
+    stopSlugs,
+    pinnedDays,
+  };
+};
+
+const isCompleteSharedTrip = (
+  parsed: ParsedSharedTrip
+): parsed is CompleteParsedSharedTrip =>
+  [
+    parsed.days,
+    parsed.minHours,
+    parsed.maxHours,
+    parsed.speedKnots,
+    parsed.startSlug,
+    parsed.firstDestinationSlug,
+    parsed.startDate,
+    parsed.departureMinutes,
+    parsed.mastHeightFeet,
+    parsed.windAware,
+    parsed.roundTrip,
+    parsed.stopSlugs,
+    parsed.pinnedDays,
+  ].every((value) => value !== null);
+
+export const decodeSharedTrip = (
+  query: SearchParamsReader,
+  knownSlugs: ReadonlySet<string>
+): SharedTripDecodeResult => {
+  // `v` is the namespace sentinel. Generic query keys such as `date` or
+  // `start` may belong to another integration and must not trigger a warning.
+  const hasSharedTrip = query.has("v");
+  if (!hasSharedTrip) return { state: null, issues: [], hasSharedTrip: false };
+
+  const issues: SharedTripIssue[] = [];
+  const fields = readFields(query, issues);
+  validateVersion(fields.v, issues);
+  const parsed = parseSharedTripFields(fields, knownSlugs, issues);
+
+  if (issues.length > 0 || !isCompleteSharedTrip(parsed)) {
     return { state: null, issues, hasSharedTrip };
   }
 
   return {
     state: {
       version: SHARED_TRIP_VERSION,
-      days,
-      minHours,
-      maxHours,
-      speedKnots,
-      startSlug,
-      firstDestinationSlug,
-      startDate,
-      departureMinutes,
-      mastHeightFeet,
-      windAware,
-      roundTrip,
-      customEndSlug,
-      stopSlugs,
-      pinnedDays,
+      ...parsed,
     },
     issues: [],
     hasSharedTrip,

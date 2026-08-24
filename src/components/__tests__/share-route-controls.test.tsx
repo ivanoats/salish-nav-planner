@@ -106,7 +106,7 @@ describe("ShareRouteControls", () => {
   });
 
   it("copies the canonical URL and announces success", async () => {
-    const writeText = vi.fn().mockResolvedValue(undefined);
+    const writeText = vi.fn(() => Promise.resolve());
     Object.defineProperty(navigator, "clipboard", {
       configurable: true,
       value: { writeText },
@@ -115,6 +115,7 @@ describe("ShareRouteControls", () => {
 
     await act(async () => {
       fireEvent.click(screen.getByRole("button", { name: "Copy link" }));
+      await writeText.mock.results[0]?.value;
     });
 
     expect(writeText).toHaveBeenCalledWith(

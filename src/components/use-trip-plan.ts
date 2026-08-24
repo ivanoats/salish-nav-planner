@@ -9,6 +9,7 @@ import { clampMastHeight, DEFAULT_MAST_HEIGHT_FEET } from "@/domain/obstruction"
 import { WIND_PENALTY_WEIGHT } from "@/domain/wind";
 import {
   clampDayHours,
+  clampSpeed,
   clampTripDays,
   dayLengthRangeFor,
   DEFAULT_MAX_DAY_HOURS,
@@ -177,7 +178,7 @@ export const useTripPlan = (
 
   const setSpeedKnots = useCallback((knots: number) => {
     releaseSharedLocks();
-    setSpeedKnotsState(knots);
+    setSpeedKnotsState(clampSpeed(knots));
   }, [releaseSharedLocks]);
   const setStartSlug = useCallback((slug: string | null) => {
     releaseSharedLocks();
