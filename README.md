@@ -287,8 +287,10 @@ nwcruising.net page — Deception Pass, Admiralty Inlet, Colvos Passage,
 etc). This is an approximation for trip planning, not a chartplotter
 route. For the options considered, including an evaluation of
 `searoute-py`, see `docs/adr/0001-water-route-geometry-options.md`;
-`public/data/salish-mesh.json` (below) is the water network built to
-replace it, though nothing in the app reads it yet.
+`public/data/salish-mesh.json` (below) is the water network the map now
+draws from: `src/domain/mesh-route.ts` walks it between each leg's
+endpoints, falling back to the straight line for any leg the mesh cannot
+serve. The `via`-bending path above is that fallback.
 
 **Licensing**: robots.txt permits crawling `nm_folders/`, `ca-nm_folders/`,
 and `routes*/`, but no redistribution permission has been sought from

@@ -16,6 +16,11 @@ import "maplibre-gl/dist/maplibre-gl.css";
 import { Protocol } from "pmtiles";
 import { useEffect, useRef, useState } from "react";
 import { buildDisplayedRouteLineCoordinates } from "@/domain/route-line";
+import {
+  buildMeshGraph,
+  buildMeshRouteLineCoordinates,
+  type MeshGraph,
+} from "@/domain/mesh-route";
 import type { Location, Waypoint } from "@/domain/location";
 import type { PlannedRoute } from "@/domain/route";
 
@@ -89,6 +94,35 @@ export function MapView({
   const markersRef = useRef<Marker[]>([]);
   const locationPopupRef = useRef<Popup | null>(null);
   const [styleLoaded, setStyleLoaded] = useState(false);
+  const [meshGraph, setMeshGraph] = useState<MeshGraph | null>(null);
+
+  // The mesh is ~800 KB, so it is fetched rather than shipped in the page
+  // payload, and only once a trip exists to draw. Until it arrives the map
+  // draws the straight lines it always did; when it lands the route
+  // redraws over water.
+  const wantsMesh = routes.some((dayRoute) => dayRoute.legs.length > 0);
+  useEffect(() => {
+    if (!wantsMesh || meshGraph !== null) return undefined;
+    let cancelled = false;
+    void (async () => {
+      try {
+        const response = await fetch("/data/salish-mesh.json");
+        if (!response.ok) throw new Error(`HTTP ${response.status}`);
+        const mesh = await response.json();
+        if (!cancelled) setMeshGraph(buildMeshGraph(mesh));
+      } catch (error) {
+        // Not fatal: the straight-line path below still draws a route.
+        console.warn(
+          "[map] could not load the navigation mesh; route lines will be drawn " +
+            "straight between stops and may cross land.",
+          error
+        );
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [wantsMesh, meshGraph]);
 
   useEffect(() => {
     // `undefined` rather than a bare `return`, so this path and the cleanup
@@ -318,9 +352,18 @@ export function MapView({
 
     routes.forEach((dayRoute, index) => {
       if (dayRoute.legs.length === 0) return;
-      const coordinates = buildDisplayedRouteLineCoordinates(dayRoute, locationsBySlug, waypoints).map(
-        ([lon, lat]) => [lon, lat] as [number, number]
-      );
+      // Over the mesh where it can be, straight where it cannot — per leg,
+      // so one harbour the mesh does not reach costs that leg's shape
+      // rather than the day's.
+      const line =
+        meshGraph === null
+          ? buildDisplayedRouteLineCoordinates(dayRoute, locationsBySlug, waypoints)
+          : buildMeshRouteLineCoordinates(dayRoute, locationsBySlug, meshGraph, (leg) =>
+              console.warn(
+                `[map] no mesh route for ${leg.from} -> ${leg.to}; drawing it straight.`
+              )
+            );
+      const coordinates = line.map(([lon, lat]) => [lon, lat] as [number, number]);
       if (coordinates.length === 0) return;
       allCoordinates.push(...coordinates);
       features.push({
@@ -340,7 +383,7 @@ export function MapView({
       );
       map.fitBounds(bounds, { padding: FIT_BOUNDS_PADDING, maxZoom: FIT_BOUNDS_MAX_ZOOM, duration: FIT_BOUNDS_DURATION });
     }
-  }, [routes, locations, waypoints, styleLoaded]);
+  }, [routes, locations, waypoints, styleLoaded, meshGraph]);
 
   return <div ref={containerRef} style={{ width: "100%", height: "100%" }} />;
 }
