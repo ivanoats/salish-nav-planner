@@ -159,16 +159,8 @@ class Frontier {
  * null when the mesh cannot serve the pair — which the caller should
  * treat as "fall back to the straight line", not as an error.
  */
-export const meshPathCoordinates = (
-  graph: MeshGraph,
-  from: Coordinates,
-  to: Coordinates
-): LonLat[] | null => {
-  const start = nearestNode(graph, from);
-  const goal = nearestNode(graph, to);
-  if (start === null || goal === null) return null;
-  if (start === goal) return null;
-
+/** Dijkstra between two nodes, as node indices. */
+const shortestNodePath = (graph: MeshGraph, start: number, goal: number): number[] | null => {
   const distance = new Float64Array(graph.nodes.length).fill(Number.POSITIVE_INFINITY);
   const cameFrom = new Int32Array(graph.nodes.length).fill(-1);
   const settled = new Uint8Array(graph.nodes.length);
@@ -195,13 +187,30 @@ export const meshPathCoordinates = (
 
   if (settled[goal] !== 1) return null;
 
-  const path: LonLat[] = [];
+  const path: number[] = [];
   for (let at = goal; at !== -1; at = cameFrom[at] as number) {
-    const node = graph.nodes[at] as Node;
-    path.push([node.at.lon, node.at.lat]);
+    path.push(at);
     if (at === start) break;
   }
   return path.reverse();
+};
+
+export const meshPathCoordinates = (
+  graph: MeshGraph,
+  from: Coordinates,
+  to: Coordinates
+): LonLat[] | null => {
+  const start = nearestNode(graph, from);
+  const goal = nearestNode(graph, to);
+  if (start === null || goal === null || start === goal) return null;
+
+  const path = shortestNodePath(graph, start, goal);
+  return (
+    path?.map((index) => {
+      const node = graph.nodes[index] as Node;
+      return [node.at.lon, node.at.lat] as LonLat;
+    }) ?? null
+  );
 };
 
 /**

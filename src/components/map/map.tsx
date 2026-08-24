@@ -104,21 +104,20 @@ export function MapView({
   useEffect(() => {
     if (!wantsMesh || meshGraph !== null) return undefined;
     let cancelled = false;
-    void (async () => {
-      try {
-        const response = await fetch("/data/salish-mesh.json");
-        if (!response.ok) throw new Error(`HTTP ${response.status}`);
-        const mesh = await response.json();
-        if (!cancelled) setMeshGraph(buildMeshGraph(mesh));
-      } catch (error) {
-        // Not fatal: the straight-line path below still draws a route.
-        console.warn(
-          "[map] could not load the navigation mesh; route lines will be drawn " +
-            "straight between stops and may cross land.",
-          error
-        );
-      }
-    })();
+    const load = async () => {
+      const response = await fetch("/data/salish-mesh.json");
+      if (!response.ok) throw new Error(`HTTP ${response.status}`);
+      const mesh = await response.json();
+      if (!cancelled) setMeshGraph(buildMeshGraph(mesh));
+    };
+    load().catch((error: unknown) => {
+      // Not fatal: the straight-line path below still draws a route.
+      console.warn(
+        "[map] could not load the navigation mesh; route lines will be drawn " +
+          "straight between stops and may cross land.",
+        error
+      );
+    });
     return () => {
       cancelled = true;
     };

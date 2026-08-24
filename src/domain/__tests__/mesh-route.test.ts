@@ -70,9 +70,12 @@ describe("buildMeshGraph", () => {
     // The spur starts on a vertex the corridor already had, so the graph
     // gains the spur's far end and nothing else.
     expect(graph.nodes).toHaveLength(5);
+    // Degree, not identity: the corridor gives the shared vertex two
+    // neighbours and the spur a third, which only holds if all three
+    // features resolved to the same node.
     const shared = graph.byKey.get("1,1");
     if (shared === undefined) throw new Error("expected a node at 1,1");
-    expect(graph.nodes[shared].edges).toHaveLength(3);
+    expect(graph.nodes[shared]?.edges).toHaveLength(3);
   });
 
   it("ignores Point features", () => {
