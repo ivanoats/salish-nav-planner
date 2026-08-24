@@ -44,6 +44,11 @@ Controls:
   the auto-picked days after it, since they were chosen relative to a
   different upstream stop. A pinned stop outside your day-length window
   is honored but flagged.
+- **Copy link** puts a self-contained versioned trip URL on the clipboard.
+  It includes every planner setting, the resolved stop sequence, and which
+  days you explicitly pinned, so the recipient sees the same itinerary even
+  if live weather or destination rankings have changed. Unsupported or
+  malformed shared links show a warning instead of guessing at their meaning.
 
 Each planned day shows the day's wind (direction, sustained and gust
 speed, Beaufort force, and your point of sail on that heading), plus

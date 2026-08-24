@@ -9,6 +9,7 @@ import { clampMastHeight, DEFAULT_MAST_HEIGHT_FEET } from "@/domain/obstruction"
 import { WIND_PENALTY_WEIGHT } from "@/domain/wind";
 import {
   clampDayHours,
+  clampSpeed,
   clampTripDays,
   dayLengthRangeFor,
   DEFAULT_MAX_DAY_HOURS,
@@ -18,6 +19,7 @@ import {
 } from "@/domain/trip";
 import type { DayConditions } from "@/application/day-conditions";
 import type { Coordinates } from "@/domain/location";
+import type { SharedTripState } from "@/application/shareable-trip-url";
 
 /**
  * Realistic plans stay far below this; it mirrors the API route's own
@@ -37,6 +39,7 @@ export interface TripPlan {
   readonly startSlug: string | null;
   readonly firstDestinationSlug: string | null;
   readonly roundTrip: boolean;
+  readonly customEndSlug: string | null;
   readonly endSlug: string | null;
   readonly tripDays: readonly TripDay[];
   /** Every stop in order, including the start — for map markers. */
@@ -55,6 +58,8 @@ export interface TripPlan {
   readonly windStatus: FetchStatus;
   readonly currentsStatus: FetchStatus;
   readonly dayConditions: readonly DayConditions[];
+  /** Actual user pins, excluding temporary locks loaded from a shared URL. */
+  readonly pinnedDays: readonly number[];
 
   setDays(days: number): void;
   setMinHours(hours: number): void;
@@ -77,24 +82,82 @@ export interface TripPlan {
   isPinned(dayNumber: number): boolean;
 }
 
-export const useTripPlan = (composition: Composition): TripPlan => {
-  const [days, setDaysState] = useState(1);
-  const [minHours, setMinHoursState] = useState(DEFAULT_MIN_DAY_HOURS);
-  const [maxHours, setMaxHoursState] = useState(DEFAULT_MAX_DAY_HOURS);
-  const [speedKnots, setSpeedKnots] = useState(DEFAULT_SPEED_KNOTS);
-  const [startSlug, setStartSlug] = useState<string | null>(null);
-  const [firstDestinationSlug, setFirstDestinationSlug] = useState<string | null>(null);
-  const [roundTrip, setRoundTrip] = useState(false);
-  const [customEndSlug, setCustomEndSlug] = useState<string | null>(null);
-  const [overrides, setOverrides] = useState<ReadonlyMap<number, string>>(new Map());
-  const [startDate, setStartDate] = useState<IsoDate>(todayIso);
-  const [departureMinutes, setDepartureMinutes] = useState(DEFAULT_DEPARTURE_MINUTES);
-  const [windAware, setWindAware] = useState(true);
-  const [mastHeightFeet, setMastHeightState] = useState(DEFAULT_MAST_HEIGHT_FEET);
+const initialPinnedOverrides = (
+  initialState: SharedTripState | null
+): ReadonlyMap<number, string> => {
+  const pins = new Map<number, string>();
+  if (initialState === null) return pins;
+  for (const day of initialState.pinnedDays) {
+    const slug = initialState.stopSlugs[day];
+    if (slug !== undefined) pins.set(day, slug);
+  }
+  return pins;
+};
+
+const initialSharedLocks = (
+  initialState: SharedTripState | null
+): ReadonlyMap<number, string> => {
+  const locks = new Map<number, string>();
+  if (initialState === null) return locks;
+  const fixedEnd = initialState.roundTrip || initialState.customEndSlug !== null;
+  for (let day = 2; day <= initialState.days; day++) {
+    if (initialState.pinnedDays.includes(day)) continue;
+    if (fixedEnd && initialState.days > 1 && day === initialState.days) continue;
+    const slug = initialState.stopSlugs[day];
+    if (slug !== undefined) locks.set(day, slug);
+  }
+  return locks;
+};
+
+export const useTripPlan = (
+  composition: Composition,
+  initialState: SharedTripState | null = null
+): TripPlan => {
+  const [days, setDaysState] = useState(initialState?.days ?? 1);
+  const [minHours, setMinHoursState] = useState(
+    initialState?.minHours ?? DEFAULT_MIN_DAY_HOURS
+  );
+  const [maxHours, setMaxHoursState] = useState(
+    initialState?.maxHours ?? DEFAULT_MAX_DAY_HOURS
+  );
+  const [speedKnots, setSpeedKnotsState] = useState(
+    initialState?.speedKnots ?? DEFAULT_SPEED_KNOTS
+  );
+  const [startSlug, setStartSlugState] = useState<string | null>(
+    initialState?.startSlug ?? null
+  );
+  const [firstDestinationSlug, setFirstDestinationSlugState] = useState<string | null>(
+    initialState?.firstDestinationSlug ?? null
+  );
+  const [roundTrip, setRoundTripState] = useState(initialState?.roundTrip ?? false);
+  const [customEndSlug, setCustomEndSlugState] = useState<string | null>(
+    initialState?.customEndSlug ?? null
+  );
+  const [overrides, setOverrides] = useState<ReadonlyMap<number, string>>(() =>
+    initialPinnedOverrides(initialState)
+  );
+  const [sharedLocks, setSharedLocks] = useState<ReadonlyMap<number, string>>(() =>
+    initialSharedLocks(initialState)
+  );
+  const [startDate, setStartDateState] = useState<IsoDate>(
+    initialState?.startDate ?? todayIso
+  );
+  const [departureMinutes, setDepartureMinutes] = useState(
+    initialState?.departureMinutes ?? DEFAULT_DEPARTURE_MINUTES
+  );
+  const [windAware, setWindAwareState] = useState(initialState?.windAware ?? true);
+  const [mastHeightFeet, setMastHeightState] = useState(
+    initialState?.mastHeightFeet ?? DEFAULT_MAST_HEIGHT_FEET
+  );
+
+  const releaseSharedLocks = useCallback(() => {
+    setSharedLocks((previous) => (previous.size === 0 ? previous : new Map()));
+  }, []);
 
   const setMastHeightFeet = useCallback((feet: number) => {
+    releaseSharedLocks();
     setMastHeightState(clampMastHeight(feet));
-  }, []);
+  }, [releaseSharedLocks]);
 
   // Speed feeds the planner here: the hour window the user set converts
   // to a distance window, so a faster boat genuinely reaches further
@@ -105,11 +168,42 @@ export const useTripPlan = (composition: Composition): TripPlan => {
   );
 
   const setMinHours = useCallback((hours: number) => {
+    releaseSharedLocks();
     setMinHoursState(clampDayHours(hours));
-  }, []);
+  }, [releaseSharedLocks]);
   const setMaxHours = useCallback((hours: number) => {
+    releaseSharedLocks();
     setMaxHoursState(clampDayHours(hours));
-  }, []);
+  }, [releaseSharedLocks]);
+
+  const setSpeedKnots = useCallback((knots: number) => {
+    releaseSharedLocks();
+    setSpeedKnotsState(clampSpeed(knots));
+  }, [releaseSharedLocks]);
+  const setStartSlug = useCallback((slug: string | null) => {
+    releaseSharedLocks();
+    setStartSlugState(slug);
+  }, [releaseSharedLocks]);
+  const setFirstDestinationSlug = useCallback((slug: string | null) => {
+    releaseSharedLocks();
+    setFirstDestinationSlugState(slug);
+  }, [releaseSharedLocks]);
+  const setRoundTrip = useCallback((next: boolean) => {
+    releaseSharedLocks();
+    setRoundTripState(next);
+  }, [releaseSharedLocks]);
+  const setCustomEndSlug = useCallback((slug: string | null) => {
+    releaseSharedLocks();
+    setCustomEndSlugState(slug);
+  }, [releaseSharedLocks]);
+  const setStartDate = useCallback((date: IsoDate) => {
+    releaseSharedLocks();
+    setStartDateState(date);
+  }, [releaseSharedLocks]);
+  const setWindAware = useCallback((next: boolean) => {
+    releaseSharedLocks();
+    setWindAwareState(next);
+  }, [releaseSharedLocks]);
 
   // The forecast is fetched from the dates alone, before any destination
   // is known, which is what lets it feed back into ranking below without
@@ -143,6 +237,13 @@ export const useTripPlan = (composition: Composition): TripPlan => {
   // name an end point, and absent both the trip just wanders one-way.
   const endSlug = roundTrip ? startSlug : customEndSlug;
 
+  const planningOverrides = useMemo(() => {
+    if (sharedLocks.size === 0) return overrides;
+    const combined = new Map(sharedLocks);
+    for (const [day, slug] of overrides) combined.set(day, slug);
+    return combined;
+  }, [overrides, sharedLocks]);
+
   const tripRequest = useMemo(
     () =>
       startSlug === null
@@ -153,11 +254,20 @@ export const useTripPlan = (composition: Composition): TripPlan => {
             endSlug,
             days,
             range,
-            overrides,
+            overrides: planningOverrides,
             weather,
             mastHeightFeet,
           },
-    [startSlug, firstDestinationSlug, endSlug, days, range, overrides, weather, mastHeightFeet]
+    [
+      startSlug,
+      firstDestinationSlug,
+      endSlug,
+      days,
+      range,
+      planningOverrides,
+      weather,
+      mastHeightFeet,
+    ]
   );
 
   const tripDays = useMemo(
@@ -205,6 +315,7 @@ export const useTripPlan = (composition: Composition): TripPlan => {
 
   const setDays = useCallback((next: number) => {
     const clamped = clampTripDays(next);
+    releaseSharedLocks();
     setDaysState(clamped);
     // Drop pins for days that no longer exist, so shortening then
     // re-lengthening a trip doesn't resurrect stale choices.
@@ -213,9 +324,14 @@ export const useTripPlan = (composition: Composition): TripPlan => {
       for (const [day, slug] of prev) if (day <= clamped) kept.set(day, slug);
       return kept;
     });
-  }, []);
+  }, [releaseSharedLocks]);
 
   const setDayDestination = useCallback((dayNumber: number, slug: string) => {
+    setSharedLocks((previous) => {
+      const next = new Map(previous);
+      for (const day of [...next.keys()]) if (day >= dayNumber) next.delete(day);
+      return next;
+    });
     setOverrides((prev) => {
       const next = new Map(prev);
       next.set(dayNumber, slug);
@@ -228,6 +344,11 @@ export const useTripPlan = (composition: Composition): TripPlan => {
   }, []);
 
   const clearDayDestination = useCallback((dayNumber: number) => {
+    setSharedLocks((previous) => {
+      const next = new Map(previous);
+      for (const day of [...next.keys()]) if (day >= dayNumber) next.delete(day);
+      return next;
+    });
     setOverrides((prev) => {
       const next = new Map(prev);
       next.delete(dayNumber);
@@ -266,6 +387,7 @@ export const useTripPlan = (composition: Composition): TripPlan => {
   );
 
   const isPinned = useCallback((dayNumber: number) => overrides.has(dayNumber), [overrides]);
+  const pinnedDays = useMemo(() => [...overrides.keys()].sort((a, b) => a - b), [overrides]);
 
   return {
     days,
@@ -277,6 +399,7 @@ export const useTripPlan = (composition: Composition): TripPlan => {
     startSlug,
     firstDestinationSlug,
     roundTrip,
+    customEndSlug,
     endSlug,
     tripDays,
     stopSlugs,
@@ -289,6 +412,7 @@ export const useTripPlan = (composition: Composition): TripPlan => {
     windStatus,
     currentsStatus,
     dayConditions,
+    pinnedDays,
     setDays,
     setMinHours,
     setMaxHours,
