@@ -1,1 +1,1 @@
-export const css = (): string => "";
+export const css = (..._args: unknown[]): string => "";
