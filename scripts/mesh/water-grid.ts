@@ -272,6 +272,37 @@ export const buildWaterGrid = (options: {
 
   const water = new Uint8Array(cols * rows);
 
+  /**
+   * Proves the flood stayed at sea. A gap anywhere in the shoreline
+   * barrier lets it inland, and the result still looks like a plausible
+   * run — corridors trace, spurs attach, nothing errors — while every
+   * line is drawn over dry land.
+   */
+  const assertNothingLeaked = (filled: number) => {
+  // A gap anywhere in the shoreline barrier lets the flood inland, and
+  // the result still looks like a plausible run — corridors trace, spurs
+  // attach, nothing errors — while every line is drawn over dry land.
+  // Checking a few points that are unambiguously mountain catches it.
+  const wetLand: string[] = [];
+  for (const [dryLon, dryLat] of options.mustBeDry) {
+    const dryCol = col(dryLon);
+    const dryRow = row(dryLat);
+    if (dryCol < 0 || dryCol >= cols || dryRow < 0 || dryRow >= rows) continue;
+    if (water[dryRow * cols + dryCol] === 1) wetLand.push(`${dryLon},${dryLat}`);
+  }
+  if (wetLand.length > 0) {
+    // Reporting all of them, not just the first, is what distinguishes
+    // one unclosed inlet from a barrier that has failed everywhere.
+    throw new Error(
+      `the flood fill reached ${wetLand.length} of ${options.mustBeDry.length} inland ` +
+        `check points (${wetLand.join("; ")}), so the shoreline barrier has a gap. ` +
+        `The flood covered ${((100 * filled) / (cols * rows)).toFixed(0)}% of the grid; ` +
+        "anything above about 70% means it escaped inland. Usually a coastline tile that " +
+        "never downloaded: re-run `npm run mesh:coastline` and check its output for FAILED."
+    );
+  }
+  };
+
   /** Floods inward from the open ocean, then checks nothing leaked. */
   const floodFromSea = () => {
     // Flood from the open sea. 4-connected on purpose: an 8-connected
@@ -320,28 +351,7 @@ export const buildWaterGrid = (options: {
         `(${((100 * filled) / (cols * rows)).toFixed(0)}% of the grid)`
     );
 
-    // A gap anywhere in the shoreline barrier lets the flood inland, and
-    // the result still looks like a plausible run — corridors trace, spurs
-    // attach, nothing errors — while every line is drawn over dry land.
-    // Checking a few points that are unambiguously mountain catches it.
-    const wetLand: string[] = [];
-    for (const [dryLon, dryLat] of options.mustBeDry) {
-      const dryCol = col(dryLon);
-      const dryRow = row(dryLat);
-      if (dryCol < 0 || dryCol >= cols || dryRow < 0 || dryRow >= rows) continue;
-      if (water[dryRow * cols + dryCol] === 1) wetLand.push(`${dryLon},${dryLat}`);
-    }
-    if (wetLand.length > 0) {
-      // Reporting all of them, not just the first, is what distinguishes
-      // one unclosed inlet from a barrier that has failed everywhere.
-      throw new Error(
-        `the flood fill reached ${wetLand.length} of ${options.mustBeDry.length} inland ` +
-          `check points (${wetLand.join("; ")}), so the shoreline barrier has a gap. ` +
-          `The flood covered ${((100 * filled) / (cols * rows)).toFixed(0)}% of the grid; ` +
-          `anything above about 70% means it escaped inland. Usually a coastline tile that ` +
-          `never downloaded: re-run \`npm run mesh:coastline\` and check its output for FAILED.`
-      );
-    }
+    assertNothingLeaked(filled);
   };
   floodFromSea();
 
@@ -420,22 +430,23 @@ export const buildWaterGrid = (options: {
     // Dredged cuts and lock chambers, added on top of the flood.
     for (const patch of options.patches) {
       for (let i = 0; i + 1 < patch.path.length; i++) {
-        const a = patch.path[i] as readonly [number, number];
-        const b = patch.path[i + 1] as readonly [number, number];
+        const from = patch.path[i] as readonly [number, number];
+        const to = patch.path[i + 1] as readonly [number, number];
         const steps = Math.max(
           1,
-          Math.ceil(Math.hypot(col(b[0]) - col(a[0]), row(b[1]) - row(a[1])))
+          Math.ceil(Math.hypot(col(to[0]) - col(from[0]), row(to[1]) - row(from[1])))
         );
-        for (let s = 0; s <= steps; s++) {
-          const t = s / steps;
-          const cx = Math.round(col(a[0]) + t * (col(b[0]) - col(a[0])));
-          const cy = Math.round(row(a[1]) + t * (row(b[1]) - row(a[1])));
-          for (let oy = -patch.widthCells; oy <= patch.widthCells; oy++) {
-            for (let ox = -patch.widthCells; ox <= patch.widthCells; ox++) {
-              const x = cx + ox;
-              const y = cy + oy;
-              if (x < 0 || x >= cols || y < 0 || y >= rows) continue;
-              water[y * cols + x] = 1;
+        for (let step = 0; step <= steps; step++) {
+          const along = step / steps;
+          const centreCol = Math.round(col(from[0]) + along * (col(to[0]) - col(from[0])));
+          const centreRow = Math.round(row(from[1]) + along * (row(to[1]) - row(from[1])));
+          for (let offsetRow = -patch.widthCells; offsetRow <= patch.widthCells; offsetRow++) {
+            for (let offsetCol = -patch.widthCells; offsetCol <= patch.widthCells; offsetCol++) {
+              const paintCol = centreCol + offsetCol;
+              const paintRow = centreRow + offsetRow;
+              if (paintCol < 0 || paintCol >= cols) continue;
+              if (paintRow < 0 || paintRow >= rows) continue;
+              water[paintRow * cols + paintCol] = 1;
             }
           }
         }
@@ -475,13 +486,15 @@ export const buildWaterGrid = (options: {
     let baysRejected = 0;
     let baysLandlocked = 0;
 
-    for (const seed of seaSide) {
-      if (blocked[seed] === 1 || water[seed] === 1 || rejected[seed] === 1) continue;
-
+    /**
+     * The dry, unblocked region around a seed. `overflowed` means it ran
+     * past the cap, so the seed was on the wrong side of a misdrawn way
+     * and is sitting in the middle of a landmass rather than in a bay.
+     */
+    const gatherBasin = (seed: number): { cells: Set<number>; overflowed: boolean } => {
       const seen: number[] = [seed];
       const visiting = new Set<number>([seed]);
       let head = 0;
-      let overflowed = false;
       while (head < seen.length) {
         const index = seen[head++] as number;
         const x = index % cols;
@@ -494,32 +507,25 @@ export const buildWaterGrid = (options: {
         ];
         for (const next of neighbours) {
           if (next < 0 || blocked[next] === 1 || water[next] === 1 || visiting.has(next)) continue;
-          if (seen.length >= BAY_CAP) {
-            overflowed = true;
-            break;
-          }
+          if (seen.length >= BAY_CAP) return { cells: visiting, overflowed: true };
           visiting.add(next);
           seen.push(next);
         }
-        if (overflowed) break;
       }
+      return { cells: visiting, overflowed: false };
+    };
 
-      if (overflowed) {
-        baysRejected++;
-        for (const index of visiting) rejected[index] = 1;
-        continue;
-      }
-      for (const index of visiting) water[index] = 1;
-      baysOpened++;
-
-      // The bay is water now, but still walled off from the sea by the
-      // one or two cells its entrance was lost in — so a boat could not
-      // get there and the spur search would give up. Find the narrowest
-      // gap between the new water and the old, and open it.
+    /**
+     * Cuts through the cell or two of shoreline the bay's entrance was
+     * lost in, so the new water joins the old. Returns false when no sea
+     * is close enough, which leaves the bay walled off for the
+     * reachability pass to discard.
+     */
+    const openLostEntrance = (basin: ReadonlySet<number>): boolean => {
       let bestGap = Number.POSITIVE_INFINITY;
       let from = -1;
       let to = -1;
-      for (const index of visiting) {
+      for (const index of basin) {
         const x = index % cols;
         const y = (index - x) / cols;
         for (let dy = -ENTRANCE_REACH; dy <= ENTRANCE_REACH && bestGap > 2; dy++) {
@@ -529,7 +535,7 @@ export const buildWaterGrid = (options: {
             const nx = x + dx;
             if (nx < 0 || nx >= cols) continue;
             const candidate = ny * cols + nx;
-            if (water[candidate] !== 1 || visiting.has(candidate)) continue;
+            if (water[candidate] !== 1 || basin.has(candidate)) continue;
             const gap = Math.hypot(dx, dy);
             if (gap < bestGap) {
               bestGap = gap;
@@ -539,21 +545,36 @@ export const buildWaterGrid = (options: {
           }
         }
       }
-      if (from === -1 || to === -1) {
-        baysLandlocked++;
-        continue;
-      }
+      if (from === -1 || to === -1) return false;
+
       const fromX = from % cols;
       const fromY = (from - fromX) / cols;
       const toX = to % cols;
       const toY = (to - toX) / cols;
       const steps = Math.max(Math.abs(toX - fromX), Math.abs(toY - fromY));
       for (let step = 0; step <= steps; step++) {
-        const t = steps === 0 ? 0 : step / steps;
-        const x = Math.round(fromX + t * (toX - fromX));
-        const y = Math.round(fromY + t * (toY - fromY));
-        water[y * cols + x] = 1;
+        const along = steps === 0 ? 0 : step / steps;
+        const openCol = Math.round(fromX + along * (toX - fromX));
+        const openRow = Math.round(fromY + along * (toY - fromY));
+        water[openRow * cols + openCol] = 1;
       }
+      return true;
+    };
+
+    for (const seed of seaSide) {
+      if (blocked[seed] === 1 || water[seed] === 1 || rejected[seed] === 1) continue;
+
+      const basin = gatherBasin(seed);
+      if (basin.overflowed) {
+        baysRejected++;
+        // Remembering the whole region keeps the next seed inside it free.
+        for (const index of basin.cells) rejected[index] = 1;
+        continue;
+      }
+
+      for (const index of basin.cells) water[index] = 1;
+      baysOpened++;
+      if (!openLostEntrance(basin.cells)) baysLandlocked++;
     }
     log(
       `${baysOpened} enclosed bays opened (${baysLandlocked} with no reachable entrance), ` +

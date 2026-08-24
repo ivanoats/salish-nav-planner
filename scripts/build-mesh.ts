@@ -451,101 +451,106 @@ const main = () => {
   };
 
   log(`\ntracing ${SPECS.length} corridors through the water raster`);
-  for (const spec of orderByDependency(SPECS)) {
-    const controls: Cell[] = [];
-    for (const point of spec.path) {
-      const landed = snapToWater(grid, point[0], point[1], { maxCells: 70, wantClearance: 2 });
-      if (landed === null) {
-        warnings.push(`${spec.id}: control point ${point.join(",")} is nowhere near water`);
+  /** Traces each corridor, joined to whatever it branches from. */
+  const traceCorridors = () => {
+    for (const spec of orderByDependency(SPECS)) {
+      const controls: Cell[] = [];
+      for (const point of spec.path) {
+        const landed = snapToWater(grid, point[0], point[1], { maxCells: 70, wantClearance: 2 });
+        if (landed === null) {
+          warnings.push(`${spec.id}: control point ${point.join(",")} is nowhere near water`);
+          continue;
+        }
+        // Warn on how far the point was from *any* water, not on how far
+        // it then walked to mid-channel: the first is my mistake, the
+        // second is the builder doing its job.
+        const offWater = haversineNm(point, cellToLonLat(grid, landed)) * 1852;
+        const centred = centreInChannel(grid, landed, 12);
+        if (offWater > 500) {
+          const [lon, lat] = cellToLonLat(grid, centred);
+          // The suggestion is the mid-channel cell the builder actually
+          // used, so a warning can be closed by pasting it back — after
+          // checking on a chart that it is the intended channel and not
+          // the next inlet over.
+          warnings.push(
+            `${spec.id}: control point [${point[0]}, ${point[1]}] is ${Math.round(offWater)} m ` +
+              `from any water — mid-channel is [${round(lon)}, ${round(lat)}]`
+          );
+        }
+        controls.push(centred);
+      }
+      if (controls.length < 2) {
+        warnings.push(`${spec.id}: fewer than two usable control points, skipped`);
         continue;
       }
-      // Warn on how far the point was from *any* water, not on how far
-      // it then walked to mid-channel: the first is my mistake, the
-      // second is the builder doing its job.
-      const offWater = haversineNm(point, cellToLonLat(grid, landed)) * 1852;
-      const centred = centreInChannel(grid, landed, 12);
-      if (offWater > 500) {
-        const [lon, lat] = cellToLonLat(grid, centred);
-        // The suggestion is the mid-channel cell the builder actually
-        // used, so a warning can be closed by pasting it back — after
-        // checking on a chart that it is the intended channel and not
-        // the next inlet over.
+
+      let cells: Cell[] = [];
+      const append = (segment: readonly Cell[]) => {
+        for (const cell of segment) {
+          const last = cells.at(-1);
+          if (last?.col === cell.col && last.row === cell.row) continue;
+          cells.push(cell);
+        }
+      };
+
+      let failed = false;
+      for (let i = 0; i + 1 < controls.length; i++) {
+        const segment = routeThroughWater(grid, controls[i] as Cell, controls[i + 1] as Cell);
+        if (segment === null) {
+          warnings.push(`${spec.id}: no water route between control points ${i} and ${i + 1}`);
+          failed = true;
+          break;
+        }
+        append(segment);
+      }
+      if (failed || cells.length < 2) continue;
+
+      // Join to whatever this corridor branches from, so the two share an
+      // exact vertex instead of merely passing close to one another.
+      const attach = (parentId: string | undefined, atStart: boolean) => {
+        if (parentId === undefined) return;
+        const parent = built.get(parentId);
+        if (parent === undefined) {
+          warnings.push(`${spec.id}: parent ${parentId} was not built`);
+          return;
+        }
+        const own = (atStart ? cells[0] : cells.at(-1)) as Cell;
+        const { index, cell } = nearestOnCorridor(parent, own);
+        // link runs parent -> own.
+        const link = routeThroughWater(grid, cell, own, { margin: 300 });
+        if (link === null) {
+          warnings.push(`${spec.id}: could not trace a join to ${parentId}`);
+          return;
+        }
+        parent.junctions.add(index);
+        if (atStart) {
+          cells = [...link.slice(0, -1), ...cells];
+        } else {
+          for (let i = link.length - 2; i >= 0; i--) cells.push(link[i] as Cell);
+        }
+      };
+      attach(spec.startsOn, true);
+      attach(spec.endsOn, false);
+      const trimmed = removeLoops(cells, grid.cols);
+      if (trimmed.length < cells.length) {
         warnings.push(
-          `${spec.id}: control point [${point[0]}, ${point[1]}] is ${Math.round(offWater)} m ` +
-            `from any water — mid-channel is [${round(lon)}, ${round(lat)}]`
+          `${spec.id}: trimmed ${cells.length - trimmed.length} cells where the track doubled back`
         );
       }
-      controls.push(centred);
-    }
-    if (controls.length < 2) {
-      warnings.push(`${spec.id}: fewer than two usable control points, skipped`);
-      continue;
-    }
+      cells = trimmed;
 
-    let cells: Cell[] = [];
-    const append = (segment: readonly Cell[]) => {
-      for (const cell of segment) {
-        const last = cells.at(-1);
-        if (last?.col === cell.col && last.row === cell.row) continue;
-        cells.push(cell);
-      }
-    };
-
-    let failed = false;
-    for (let i = 0; i + 1 < controls.length; i++) {
-      const segment = routeThroughWater(grid, controls[i] as Cell, controls[i + 1] as Cell);
-      if (segment === null) {
-        warnings.push(`${spec.id}: no water route between control points ${i} and ${i + 1}`);
-        failed = true;
-        break;
-      }
-      append(segment);
+      built.set(spec.id, {
+        spec,
+        cells,
+        junctions: new Set<number>([0, cells.length - 1]),
+        passIds: new Set(spec.passId === undefined ? [] : [spec.passId]),
+        obstructionIds: new Set(spec.obstructionIds ?? []),
+      });
+      log(`  ${spec.id.padEnd(28)} ${String(cells.length).padStart(6)} cells`);
     }
-    if (failed || cells.length < 2) continue;
+  };
+  traceCorridors();
 
-    // Join to whatever this corridor branches from, so the two share an
-    // exact vertex instead of merely passing close to one another.
-    const attach = (parentId: string | undefined, atStart: boolean) => {
-      if (parentId === undefined) return;
-      const parent = built.get(parentId);
-      if (parent === undefined) {
-        warnings.push(`${spec.id}: parent ${parentId} was not built`);
-        return;
-      }
-      const own = (atStart ? cells[0] : cells.at(-1)) as Cell;
-      const { index, cell } = nearestOnCorridor(parent, own);
-      // link runs parent -> own.
-      const link = routeThroughWater(grid, cell, own, { margin: 300 });
-      if (link === null) {
-        warnings.push(`${spec.id}: could not trace a join to ${parentId}`);
-        return;
-      }
-      parent.junctions.add(index);
-      if (atStart) {
-        cells = [...link.slice(0, -1), ...cells];
-      } else {
-        for (let i = link.length - 2; i >= 0; i--) cells.push(link[i] as Cell);
-      }
-    };
-    attach(spec.startsOn, true);
-    attach(spec.endsOn, false);
-    const trimmed = removeLoops(cells, grid.cols);
-    if (trimmed.length < cells.length) {
-      warnings.push(
-        `${spec.id}: trimmed ${cells.length - trimmed.length} cells where the track doubled back`
-      );
-    }
-    cells = trimmed;
-
-    built.set(spec.id, {
-      spec,
-      cells,
-      junctions: new Set<number>([0, cells.length - 1]),
-      passIds: new Set(spec.passId === undefined ? [] : [spec.passId]),
-      obstructionIds: new Set(spec.obstructionIds ?? []),
-    });
-    log(`  ${spec.id.padEnd(28)} ${String(cells.length).padStart(6)} cells`);
-  }
 
   // Spurs: every harbour finds its own way out to the network.
   const owner = new Map<number, string>();
@@ -564,54 +569,59 @@ const main = () => {
   const spurs: BuiltSpur[] = [];
 
   log(`\ntracing ${locations.length} harbour spurs`);
-  for (const location of locations) {
-    const harbour = snapToWater(grid, location.lon, location.lat, {
-      maxCells: 90,
-      wantClearance: 1,
-    });
-    if (harbour === null) {
-      warnings.push(`${location.slug}: no navigable water within 7 km of its published position`);
-      continue;
-    }
-    const moved = haversineNm([location.lon, location.lat], cellToLonLat(grid, harbour)) * 1852;
-    if (moved > 500) {
-      warnings.push(
-        `${location.slug}: published position is ${Math.round(moved)} m from the nearest water`
+  /** Traces one entrance spur per harbour, out to the nearest corridor. */
+  const traceSpurs = () => {
+    for (const location of locations) {
+      const harbour = snapToWater(grid, location.lon, location.lat, {
+        maxCells: 90,
+        wantClearance: 1,
+      });
+      if (harbour === null) {
+        warnings.push(`${location.slug}: no navigable water within 7 km of its published position`);
+        continue;
+      }
+      const moved = haversineNm([location.lon, location.lat], cellToLonLat(grid, harbour)) * 1852;
+      if (moved > 500) {
+        warnings.push(
+          `${location.slug}: published position is ${Math.round(moved)} m from the nearest water`
+        );
+      }
+
+      const path = routeToNearestTarget(grid, harbour, (index) => owner.has(index));
+      if (path === null) {
+        warnings.push(`${location.slug}: could not reach any corridor`);
+        continue;
+      }
+
+      const junctionCell = path[0] as Cell;
+      const junctionIndex = junctionCell.row * grid.cols + junctionCell.col;
+      const corridorId = owner.get(junctionIndex);
+      const corridor = corridorId === undefined ? undefined : built.get(corridorId);
+      if (corridor === undefined || corridorId === undefined) {
+        warnings.push(`${location.slug}: spur landed on an unowned cell`);
+        continue;
+      }
+      corridor.junctions.add(ownerIndex.get(junctionIndex) as number);
+
+      // Corridor first, harbour last, finishing at the published position
+      // so the graph actually terminates at the harbour.
+      const line = stringPullThroughWater(grid, path, MAX_DEVIATION_CELLS).map((cell) =>
+        cellToLonLat(grid, cell)
       );
+      const last = line.at(-1) as LonLat;
+      // How far the harbour's published position is from the last cell the
+      // search could prove was water. Usually metres; occasionally a
+      // kilometre or more, where the entrance is finer than the raster or
+      // the published position is simply inland of its own shoreline. That
+      // last leg is a straight line, not traced water, and saying so in
+      // the data is better than hoping nobody leans on it.
+      const harbourLegMetres = Math.round(haversineNm(last, [location.lon, location.lat]) * 1852);
+      if (last[0] !== location.lon || last[1] !== location.lat) line.push([location.lon, location.lat]);
+      spurs.push({ location, corridorId, line, harbourLegMetres });
     }
+  };
+  traceSpurs();
 
-    const path = routeToNearestTarget(grid, harbour, (index) => owner.has(index));
-    if (path === null) {
-      warnings.push(`${location.slug}: could not reach any corridor`);
-      continue;
-    }
-
-    const junctionCell = path[0] as Cell;
-    const junctionIndex = junctionCell.row * grid.cols + junctionCell.col;
-    const corridorId = owner.get(junctionIndex);
-    const corridor = corridorId === undefined ? undefined : built.get(corridorId);
-    if (corridor === undefined || corridorId === undefined) {
-      warnings.push(`${location.slug}: spur landed on an unowned cell`);
-      continue;
-    }
-    corridor.junctions.add(ownerIndex.get(junctionIndex) as number);
-
-    // Corridor first, harbour last, finishing at the published position
-    // so the graph actually terminates at the harbour.
-    const line = stringPullThroughWater(grid, path, MAX_DEVIATION_CELLS).map((cell) =>
-      cellToLonLat(grid, cell)
-    );
-    const last = line.at(-1) as LonLat;
-    // How far the harbour's published position is from the last cell the
-    // search could prove was water. Usually metres; occasionally a
-    // kilometre or more, where the entrance is finer than the raster or
-    // the published position is simply inland of its own shoreline. That
-    // last leg is a straight line, not traced water, and saying so in
-    // the data is better than hoping nobody leans on it.
-    const harbourLegMetres = Math.round(haversineNm(last, [location.lon, location.lat]) * 1852);
-    if (last[0] !== location.lon || last[1] !== location.lat) line.push([location.lon, location.lat]);
-    spurs.push({ location, corridorId, line, harbourLegMetres });
-  }
   log(`  ${spurs.length}/${locations.length} spurs traced`);
 
   // Passes and bridges belong to whichever corridor runs past them.
