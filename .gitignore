@@ -58,3 +58,10 @@ styled-system-studio
 
 # Local Netlify folder
 /.netlify/
+
+## Local OSM coastline cache for the mesh builder (npm run mesh:coastline).
+## ODbL data, regenerable, same posture as data/raw.
+/data/coastline/
+
+## Written by npm run mesh; regenerated on every build.
+/scripts/mesh/.build-warnings.txt
