@@ -181,6 +181,8 @@ npm run lint         # eslint
 npm run scrape       # re-run the nwcruising.net crawler
 npm run dataset      # fetch hosted route data (needs the R2_* vars)
 npm run build:passes # rebuild public/data/passes.json from NOAA + CHS
+npm run mesh:coastline # cache the OSM shoreline the mesh is traced from
+npm run mesh         # rebuild public/data/salish-mesh.json
 ```
 
 ## Weather and tides
@@ -278,9 +280,10 @@ passage name that resolves against `public/data/waypoints.json` (a
 small hand-curated set of well-known straits/passages with no own
 nwcruising.net page — Deception Pass, Admiralty Inlet, Colvos Passage,
 etc). This is an approximation for trip planning, not a chartplotter
-route. For options to move those lines onto water, including an
-evaluation of `searoute-py`, see
-`docs/adr/0001-water-route-geometry-options.md`.
+route. For the options considered, including an evaluation of
+`searoute-py`, see `docs/adr/0001-water-route-geometry-options.md`;
+`public/data/salish-mesh.json` (below) is the water network built to
+replace it, though nothing in the app reads it yet.
 
 **Licensing**: robots.txt permits crawling `nm_folders/`, `ca-nm_folders/`,
 and `routes*/`, but no redistribution permission has been sought from
@@ -338,6 +341,107 @@ happily take. Filtering edges whose published distance falls below the
 great-circle distance between their endpoints would fix it; it isn't done
 yet because the same check would drop legitimate edges wherever a
 coordinate is still wrong.
+
+## Navigation mesh
+
+`public/data/salish-mesh.json` is a connected GeoJSON network of the
+navigable water between the 220 harbours: deep-water corridors, the
+tidal passes along them, and an entrance spur from every harbour out to
+the nearest corridor. It is committed, and `npm run mesh` rebuilds it.
+
+Three kinds of feature, all in one `FeatureCollection`:
+
+- **`kind: "corridor"`** — a `LineString` for a named waterway, with a
+  `corridorClass` of `trunk` (a shipping-scale channel), `secondary` (an
+  inlet or island channel), or `pass` (a tidal gate you time rather than
+  simply steer through). Carries the `passIds` and `obstructionIds` that
+  fall along it, the `wind-zones.json` `zone` it mostly sits in, its
+  length in nautical miles, and a short pilotage note.
+- **`kind: "spur"`** — a `LineString` from a corridor to one harbour,
+  tagged with that harbour's `slug` and the `corridorId` it hangs off.
+  `harbourLegMetres` is the final straight run from the last cell the
+  search could prove was water to the harbour's published position.
+  Usually a few metres. For eleven harbours it is 0.6–3 km, because the
+  entrance is finer than the raster (Von Donop, Gorge Harbour, Squirrel
+  Cove) or the published position is simply inland of its own shoreline.
+  That last leg is drawn, not traced — treat it as a pointer at the
+  harbour rather than as water.
+- **`kind: "harbour"` / `kind: "pass"`** — `Point`s for the harbours and
+  for every entry in `passes.json`, so the file stands on its own.
+
+Corridors are split at every junction, so a spur's first coordinate and
+a branch's first coordinate are the *same* vertex as the point on the
+corridor they join. Treating shared coordinates as graph nodes is enough
+to walk the whole network.
+
+### How it is built
+
+The geometry is generated, not typed. `scripts/mesh/skeleton-*.ts`
+declares the skeleton — which waterways exist, what class each one is,
+what it branches from, and a handful of control points that put it in
+the right body of water. `scripts/build-mesh.ts` does the rest:
+
+1. `npm run mesh:coastline` caches OpenStreetMap `natural=coastline`
+   ways for the whole region into `data/coastline/` (gitignored, ODbL,
+   ~90 Overpass tiles and slow — a one-off).
+2. The shoreline is rasterised as a barrier at 80 m and flood-filled
+   from the open Pacific. Whatever the flood reaches is water connected
+   to the sea. A few named patches reopen channels narrower than a cell
+   (the lock chambers, the Fremont and Montlake cuts, the Swinomish cut,
+   Malibu Rapids), and Lake Washington is filled separately from its own
+   polygon since it carries no coastline at all.
+3. Bays whose entrance is narrower than a cell — Gorge Harbour, Von
+   Donop, Princess Louisa behind Malibu Rapids — are never reached by
+   that flood, so each is filled separately, seeded from the coastline's
+   own orientation (OSM draws land on the left, water on the right) and
+   capped, then joined to the sea across the two or three cells its
+   entrance was lost in. A final pass discards any water that is still
+   unreachable, because water a boat cannot get to is worse than none:
+   a control point snaps into it and the search then has nowhere to go.
+4. An A\* search traces between consecutive control points, weighted to
+   stay mid-channel where there is room and to relax where there isn't —
+   which is how a narrow pass ends up drawn down its middle instead of
+   against one shore.
+5. Each traced track is pulled straight against the water itself: a leg
+   is only accepted if every point along it is wet, and the allowance
+   for straightening shrinks with the channel, so a dredged cut keeps
+   its shape while open water gets a course to steer.
+
+Three checks run on every build and are the reason to trust the output.
+A set of points well inland must come out dry, which catches a hole in
+the shoreline barrier — usually a coastline tile that never downloaded,
+and otherwise a run that succeeds at everything except being true. No
+emitted line may cross land. And the whole mesh must come out as one
+connected component. Anything else lands in
+`scripts/mesh/.build-warnings.txt`.
+
+The current build traces all 110 corridors and all 220 spurs, crosses no
+land, and comes out as a single connected network of 2,718 vertices;
+45 of the 47 tidal passes attach to a corridor, the two that do not
+being Nakwakto Rapids and Quatsino Narrows, which no location in the
+dataset lies beyond.
+
+Two small tools help when a corridor comes out wrong.
+`node scripts/mesh/probe.mjs lat 47.55 -123.2 -122.7` prints where the
+shoreline crosses that line of latitude, which is how you place a
+control point mid-channel from the data instead of from memory.
+`node scripts/mesh/clip-region.mjs <minLon> <minLat> <maxLon> <maxLat>
+out.geojson` cuts one area out of the mesh as a file small enough to
+drop into [geojson.io](https://geojson.io) — Import, or paste it into
+the JSON panel — which is the quickest way to check a stretch of coast
+against a real basemap. (geojson.io no longer loads data from a URL, so
+it has to be the file.)
+
+### What it is not
+
+Not a chart, and not a route to steer. The shoreline behind it is
+OpenStreetMap's mean-high-water coastline, so the mesh knows where the
+water is and nothing whatsoever about how deep it is: no soundings, no
+rocks, no aids to navigation, no seasonal closures. Corridors follow the
+middle of navigable water because that is usually the safe place to be,
+not because anything has verified that it is. The tidal passes are the
+sharpest example — the line through Dodd Narrows is geometrically fine
+and still a bad idea at any state of tide but slack.
 
 ## Optional: real chart tiles
 
