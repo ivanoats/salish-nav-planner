@@ -153,7 +153,7 @@ const main = async () => {
 /** Loads every cached tile, de-duplicating ways that span tile borders. */
 export const loadCoastlineWays = async () => {
   const { readdir } = await import("node:fs/promises");
-  const files = (await readdir(CACHE_DIR)).filter((f) => f.endsWith(".json"));
+  const files = (await readdir(CACHE_DIR)).filter((name) => name.endsWith(".json"));
   const byId = new Map();
   for (const file of files) {
     const ways = JSON.parse(await readFile(join(CACHE_DIR, file), "utf8"));

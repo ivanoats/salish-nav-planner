@@ -34,13 +34,13 @@ const FILES = [
 ].map((path) => join(process.cwd(), path));
 
 const metresBetween = (a, b) => {
-  const toRad = (d) => (d * Math.PI) / 180;
+  const toRad = (degrees) => (degrees * Math.PI) / 180;
   const dLat = toRad(b[1] - a[1]);
   const dLon = toRad(b[0] - a[0]);
-  const h =
+  const halfChord =
     Math.sin(dLat / 2) ** 2 +
     Math.cos(toRad(a[1])) * Math.cos(toRad(b[1])) * Math.sin(dLon / 2) ** 2;
-  return 2 * 6_371_000 * Math.asin(Math.min(1, Math.sqrt(h)));
+  return 2 * 6_371_000 * Math.asin(Math.min(1, Math.sqrt(halfChord)));
 };
 
 const pattern =

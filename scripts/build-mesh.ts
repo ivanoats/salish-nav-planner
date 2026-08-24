@@ -216,16 +216,16 @@ const toRadians = (degrees: number) => (degrees * Math.PI) / 180;
 const haversineNm = (a: LonLat, b: LonLat): number => {
   const dLat = toRadians(b[1] - a[1]);
   const dLon = toRadians(b[0] - a[0]);
-  const h =
+  const halfChord =
     Math.sin(dLat / 2) ** 2 +
     Math.cos(toRadians(a[1])) * Math.cos(toRadians(b[1])) * Math.sin(dLon / 2) ** 2;
-  return 2 * EARTH_RADIUS_NM * Math.asin(Math.min(1, Math.sqrt(h)));
+  return 2 * EARTH_RADIUS_NM * Math.asin(Math.min(1, Math.sqrt(halfChord)));
 };
 
 const lengthNm = (line: readonly LonLat[]): number => {
   let total = 0;
-  for (let i = 0; i + 1 < line.length; i++) {
-    total += haversineNm(line[i] as LonLat, line[i + 1] as LonLat);
+  for (let segment = 0; segment + 1 < line.length; segment++) {
+    total += haversineNm(line[segment] as LonLat, line[segment + 1] as LonLat);
   }
   return total;
 };
@@ -268,8 +268,8 @@ const removeLoops = (cells: readonly Cell[], cols: number): Cell[] => {
     const index = cell.row * cols + cell.col;
     const earlier = seenAt.get(index);
     if (earlier !== undefined) {
-      for (let i = out.length - 1; i > earlier; i--) {
-        const dropped = out[i] as Cell;
+      for (let back = out.length - 1; back > earlier; back--) {
+        const dropped = out[back] as Cell;
         seenAt.delete(dropped.row * cols + dropped.col);
       }
       out.length = earlier + 1;
@@ -320,13 +320,13 @@ const dressCorridor = (
 ): LonLat[] => {
   const cuts = [...new Set([0, cells.length - 1, ...junctions])]
     .filter((index) => index >= 0 && index < cells.length)
-    .sort((a, b) => a - b);
+    .sort((left, right) => left - right);
 
   const out: LonLat[] = [];
-  for (let i = 0; i + 1 < cuts.length; i++) {
+  for (let cut = 0; cut + 1 < cuts.length; cut++) {
     const piece = stringPullThroughWater(
       grid,
-      cells.slice(cuts[i] as number, (cuts[i + 1] as number) + 1),
+      cells.slice(cuts[cut] as number, (cuts[cut + 1] as number) + 1),
       MAX_DEVIATION_CELLS
     );
     for (const cell of piece) {
@@ -403,8 +403,8 @@ const countComponents = (lines: readonly (readonly LonLat[])[]) => {
 
   for (const line of lines) {
     for (const point of line) if (!parent.has(key(point))) parent.set(key(point), key(point));
-    for (let i = 0; i + 1 < line.length; i++) {
-      union(key(line[i] as LonLat), key(line[i + 1] as LonLat));
+    for (let segment = 0; segment + 1 < line.length; segment++) {
+      union(key(line[segment] as LonLat), key(line[segment + 1] as LonLat));
     }
   }
 
@@ -413,7 +413,7 @@ const countComponents = (lines: readonly (readonly LonLat[])[]) => {
     const root = find(node);
     sizes.set(root, (sizes.get(root) ?? 0) + 1);
   }
-  return [...sizes.values()].sort((a, b) => b - a);
+  return [...sizes.values()].sort((larger, smaller) => smaller - larger);
 };
 
 const main = () => {
@@ -439,12 +439,12 @@ const main = () => {
   const nearestOnCorridor = (corridor: BuiltCorridor, target: Cell) => {
     let bestIndex = 0;
     let best = Number.POSITIVE_INFINITY;
-    for (let i = 0; i < corridor.cells.length; i++) {
-      const cell = corridor.cells[i] as Cell;
+    for (let position = 0; position < corridor.cells.length; position++) {
+      const cell = corridor.cells[position] as Cell;
       const distance = (cell.col - target.col) ** 2 + (cell.row - target.row) ** 2;
       if (distance < best) {
         best = distance;
-        bestIndex = i;
+        bestIndex = position;
       }
     }
     return { index: bestIndex, cell: corridor.cells[bestIndex] as Cell };
@@ -494,10 +494,10 @@ const main = () => {
       };
 
       let failed = false;
-      for (let i = 0; i + 1 < controls.length; i++) {
-        const segment = routeThroughWater(grid, controls[i] as Cell, controls[i + 1] as Cell);
+      for (let leg = 0; leg + 1 < controls.length; leg++) {
+        const segment = routeThroughWater(grid, controls[leg] as Cell, controls[leg + 1] as Cell);
         if (segment === null) {
-          warnings.push(`${spec.id}: no water route between control points ${i} and ${i + 1}`);
+          warnings.push(`${spec.id}: no water route between control points ${leg} and ${leg + 1}`);
           failed = true;
           break;
         }
@@ -526,7 +526,7 @@ const main = () => {
         if (atStart) {
           cells = [...link.slice(0, -1), ...cells];
         } else {
-          for (let i = link.length - 2; i >= 0; i--) cells.push(link[i] as Cell);
+          for (let step = link.length - 2; step >= 0; step--) cells.push(link[step] as Cell);
         }
       };
       attach(spec.startsOn, true);
@@ -556,12 +556,12 @@ const main = () => {
   const owner = new Map<number, string>();
   const ownerIndex = new Map<number, number>();
   for (const corridor of built.values()) {
-    for (let i = 0; i < corridor.cells.length; i++) {
-      const cell = corridor.cells[i] as Cell;
+    for (let position = 0; position < corridor.cells.length; position++) {
+      const cell = corridor.cells[position] as Cell;
       const index = cell.row * grid.cols + cell.col;
       if (!owner.has(index)) {
         owner.set(index, corridor.spec.id);
-        ownerIndex.set(index, i);
+        ownerIndex.set(index, position);
       }
     }
   }
@@ -669,8 +669,8 @@ const main = () => {
         name: corridor.spec.name,
         corridorClass: corridor.spec.corridorClass,
         zone: corridor.spec.zone ?? null,
-        passIds: [...corridor.passIds].sort((a, b) => a.localeCompare(b)),
-        obstructionIds: [...corridor.obstructionIds].sort((a, b) => a.localeCompare(b)),
+        passIds: [...corridor.passIds].sort((left, right) => left.localeCompare(right)),
+        obstructionIds: [...corridor.obstructionIds].sort((left, right) => left.localeCompare(right)),
         lengthNm: Math.round(lengthNm(line) * 10) / 10,
         note: corridor.spec.note ?? null,
       },
@@ -732,13 +732,16 @@ const main = () => {
     let dry = 0;
     const limit = skipLastSegment ? line.length - 2 : line.length - 1;
     for (let index = 0; index < limit; index++) {
-      const from = line[index] as LonLat;
-      const to = line[index + 1] as LonLat;
-      const steps = Math.max(1, Math.ceil((haversineNm(from, to) * 1852) / (CELL_METRES / 2)));
+      const start = line[index] as LonLat;
+      const finish = line[index + 1] as LonLat;
+      const steps = Math.max(
+        1,
+        Math.ceil((haversineNm(start, finish) * 1852) / (CELL_METRES / 2))
+      );
       for (let step = 0; step <= steps; step++) {
         const along = step / steps;
-        const col = grid.col(from[0] + along * (to[0] - from[0]));
-        const row = grid.row(from[1] + along * (to[1] - from[1]));
+        const col = grid.col(start[0] + along * (finish[0] - start[0]));
+        const row = grid.row(start[1] + along * (finish[1] - start[1]));
         if (col < 0 || col >= grid.cols || row < 0 || row >= grid.rows) continue;
         if (grid.water[row * grid.cols + col] !== 1) dry++;
       }
