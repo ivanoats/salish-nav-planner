@@ -14,6 +14,7 @@
 import { readdirSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 
+/** A latitude/longitude box, in degrees. */
 export interface Region {
   readonly minLat: number;
   readonly maxLat: number;
@@ -45,6 +46,7 @@ const readRegionOverride = (): Region | null => {
   };
 };
 
+/** The bounds this build actually rasterises — the whole region, or the MESH_REGION override. */
 export const REGION: Region = readRegionOverride() ?? FULL_REGION;
 
 /** Target cell size. Small enough to keep Swinomish Channel open. */
@@ -56,6 +58,12 @@ const toRadians = (degrees: number) => (degrees * Math.PI) / 180;
 /** Default for callers that do not want the build's progress output. */
 const logNothing = (): void => undefined;
 
+/**
+ * The rasterised water, plus the mapping between its cells and the
+ * world. `water` says whether a cell is navigable; `clearance` says how
+ * many cells of room it has, which is what keeps a traced corridor off
+ * the beach.
+ */
 export interface WaterGrid {
   readonly cols: number;
   readonly rows: number;
@@ -158,6 +166,16 @@ export interface InlandWater {
   readonly maxCells?: number;
 }
 
+/**
+ * Builds the water raster: rasterise the shoreline, flood from the open
+ * sea, open the lakes, the dredged cuts and the bays whose entrance the
+ * raster lost, discard whatever is still unreachable, and measure the
+ * clearance around what remains.
+ *
+ * Throws if the flood reaches a point that should be dry — that means a
+ * gap in the shoreline barrier, and every line traced afterwards would
+ * be drawn over land.
+ */
 export const buildWaterGrid = (options: {
   readonly cacheDir: string;
   readonly inlandDir: string;

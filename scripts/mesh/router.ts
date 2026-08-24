@@ -163,6 +163,7 @@ const relaxNeighbours = (
   }
 };
 
+/** One cell of the water raster, by column (east) and row (north). */
 export interface Cell {
   readonly col: number;
   readonly row: number;
@@ -259,6 +260,7 @@ export const snapToWater = (
     : centreInChannel(grid, best, options.centreWithin);
 };
 
+/** Tuning for a single corridor search. Both have workable defaults. */
 export interface RouteOptions {
   /** Extra cells of search window beyond the endpoints' bounding box. */
   readonly margin?: number;

@@ -11,6 +11,12 @@ export type LonLat = readonly [number, number];
  */
 export type CorridorClass = "trunk" | "secondary" | "pass";
 
+/**
+ * One named waterway in the hand-authored skeleton: what it is called,
+ * what class of water it is, what it branches from, and the control
+ * points that put it in the right body of water. The geometry between
+ * those points is traced by the build, not declared here.
+ */
 export interface CorridorSpec {
   readonly id: string;
   readonly name: string;
