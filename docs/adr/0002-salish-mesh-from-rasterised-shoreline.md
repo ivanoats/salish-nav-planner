@@ -76,9 +76,11 @@ Generate it offline, from data rather than from memory:
 
 ### What it does not do
 
-Nothing in the app reads the mesh yet. Wiring `route-line.ts` to snap a
-planned leg onto the network, so displayed geometry and pass ETAs both
-come from it, is the next step and is deliberately out of this change.
+Displayed route geometry now comes from the mesh (#22); pass ETAs and
+obstruction matching do not. Those read `buildRouteLineCoordinates`, the
+anchor-only polyline, and moving them onto the mesh would change every
+ETA a trip reports — worth doing, and worth doing deliberately rather
+than as a side effect of fixing the lines.
 
 ADR 0001 stands as the record of the options considered; this supersedes
 its recommendation of Option A as the starting point.
