@@ -22,7 +22,7 @@
     "scrape": "tsx scripts/scrape-nwcruising.ts",
     "build:passes": "tsx scripts/build-passes.ts",
     "mesh:coastline": "node scripts/mesh/fetch-coastline.mjs && node scripts/mesh/fetch-inland-water.mjs",
-    "mesh": "NODE_OPTIONS=--max-old-space-size=12288 tsx scripts/build-mesh.ts"
+    "mesh": "tsx scripts/build-mesh.ts"
   },
   "dependencies": {
     "@ark-ui/react": "^5.38.1",

@@ -21,7 +21,12 @@ export interface CorridorSpec {
    * planner forecasts for.
    */
   readonly zone?: string;
-  /** `passes.json` id, when this corridor *is* a tidal pass. */
+  /**
+   * `passes.json` id, when this corridor is the passage that file names.
+   * Independent of `corridorClass`, which says how much sea room the
+   * corridor has rather than what it is: Rosario Strait and Haro Strait
+   * are both trunk channels and both named passes.
+   */
   readonly passId?: string;
   /** `obstructions.json` ids of overhead clearances along it. */
   readonly obstructionIds?: readonly string[];

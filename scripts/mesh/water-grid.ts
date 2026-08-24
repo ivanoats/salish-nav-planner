@@ -1,6 +1,7 @@
 /**
  * A raster of "where the salt water is", built from the cached OSM
- * coastline, plus the A* search that traces a channel through it.
+ * coastline. The search that traces a channel through it lives in
+ * ./router.ts.
  *
  * Working in a raster rather than in polygons is deliberate: assembling
  * clipped coastline ways into valid land polygons is fiddly and fails
