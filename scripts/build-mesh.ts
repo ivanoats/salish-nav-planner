@@ -803,7 +803,7 @@ const main = () => {
   writeFileSync(OUT_PATH, JSON.stringify(collection));
   writeFileSync(
     join(process.cwd(), "scripts", "mesh", ".build-warnings.txt"),
-    warnings.join("\n") + "\n"
+    `${warnings.join("\n")}\n`
   );
 
   log(`\n${warnings.length} warnings (scripts/mesh/.build-warnings.txt)`);
