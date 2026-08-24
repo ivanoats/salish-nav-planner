@@ -159,6 +159,16 @@ class Frontier {
  * null when the mesh cannot serve the pair — which the caller should
  * treat as "fall back to the straight line", not as an error.
  */
+/** Follows the came-from trail back from the goal, and turns it around. */
+const walkBack = (cameFrom: Int32Array, start: number, goal: number): number[] => {
+  const path: number[] = [];
+  for (let at = goal; at !== -1; at = cameFrom[at] as number) {
+    path.push(at);
+    if (at === start) break;
+  }
+  return path.reverse();
+};
+
 /** Dijkstra between two nodes, as node indices. */
 const shortestNodePath = (graph: MeshGraph, start: number, goal: number): number[] | null => {
   const distance = new Float64Array(graph.nodes.length).fill(Number.POSITIVE_INFINITY);
@@ -185,14 +195,7 @@ const shortestNodePath = (graph: MeshGraph, start: number, goal: number): number
     }
   }
 
-  if (settled[goal] !== 1) return null;
-
-  const path: number[] = [];
-  for (let at = goal; at !== -1; at = cameFrom[at] as number) {
-    path.push(at);
-    if (at === start) break;
-  }
-  return path.reverse();
+  return settled[goal] === 1 ? walkBack(cameFrom, start, goal) : null;
 };
 
 export const meshPathCoordinates = (
