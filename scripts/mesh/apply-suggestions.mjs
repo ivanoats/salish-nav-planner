@@ -21,8 +21,7 @@ const flagIndex = args.indexOf("--max-metres");
 const maxMetresRaw = flagIndex === -1 ? "3000" : args[flagIndex + 1];
 const maxMetres = Number(maxMetresRaw);
 if (!Number.isFinite(maxMetres) || maxMetres <= 0) {
-  console.error(`--max-metres needs a positive number, got "${maxMetresRaw}"`);
-  process.exit(1);
+  throw new Error(`--max-metres needs a positive number, got "${maxMetresRaw}"`);
 }
 const dryRun = args.includes("--dry-run");
 

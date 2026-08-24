@@ -16,8 +16,7 @@ import { join } from "node:path";
 
 const [minLon, minLat, maxLon, maxLat, outPath = "mesh-clip.geojson"] = process.argv.slice(2);
 if (maxLat === undefined) {
-  console.error("usage: clip-region.mjs <minLon> <minLat> <maxLon> <maxLat> [out.geojson]");
-  process.exit(1);
+  throw new Error("usage: clip-region.mjs <minLon> <minLat> <maxLon> <maxLat> [out.geojson]");
 }
 
 const bounds = [Number(minLon), Number(minLat), Number(maxLon), Number(maxLat)];
