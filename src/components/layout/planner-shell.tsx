@@ -9,7 +9,19 @@ import { TripControls } from "@/components/panels/trip-controls";
 import { DayItinerary } from "@/components/panels/day-itinerary";
 import { MapApp } from "@/components/map/map-app";
 import { PrintButton } from "@/components/panels/print-button";
+import {
+  SharedTripWarning,
+  ShareRouteControls,
+} from "@/components/panels/share-route-controls";
 import { useTripPlan } from "@/components/use-trip-plan";
+import {
+  sharedTripStateFromPlan,
+  useShareableTripUrl,
+} from "@/components/use-shareable-trip-url";
+import type {
+  SharedTripIssue,
+  SharedTripState,
+} from "@/application/shareable-trip-url";
 import type { Location, Waypoint } from "@/domain/location";
 import type { Obstruction } from "@/domain/obstruction";
 import type { TidalPass } from "@/domain/pass";
@@ -24,6 +36,9 @@ interface PlannerShellProps {
   readonly windZones: readonly WindZone[];
   readonly obstructions: readonly Obstruction[];
   readonly chartPmtilesUrl?: string;
+  readonly initialTripState: SharedTripState | null;
+  readonly sharedTripIssues: readonly SharedTripIssue[];
+  readonly hasIncomingSharedTrip: boolean;
 }
 
 export function PlannerShell({
@@ -34,13 +49,18 @@ export function PlannerShell({
   windZones,
   obstructions,
   chartPmtilesUrl,
+  initialTripState,
+  sharedTripIssues,
+  hasIncomingSharedTrip,
 }: PlannerShellProps) {
   const composition = useMemo(
     () => createComposition({ locations, edges, waypoints, passes, windZones, obstructions }),
     [locations, edges, waypoints, passes, windZones, obstructions]
   );
 
-  const trip = useTripPlan(composition);
+  const trip = useTripPlan(composition, initialTripState);
+  const sharedTripState = sharedTripStateFromPlan(trip);
+  useShareableTripUrl(sharedTripState, hasIncomingSharedTrip);
 
   const locationsBySlug = useMemo(
     () => new Map(locations.map((l) => [l.slug, l] as const)),
@@ -92,6 +112,8 @@ export function PlannerShell({
             Trip-planning aid, sourced from nwcruising.net distance tables. Not for navigation.
           </p>
         </div>
+
+        <SharedTripWarning issues={sharedTripIssues} />
 
         <div data-print-hide>
           <TripControls
@@ -178,6 +200,7 @@ export function PlannerShell({
           />
         ) : null}
 
+        {sharedTripState !== null ? <ShareRouteControls state={sharedTripState} /> : null}
         {dayRoutes.length > 0 ? <PrintButton /> : null}
       </aside>
 

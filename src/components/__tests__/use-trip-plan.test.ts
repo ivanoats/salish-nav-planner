@@ -24,6 +24,7 @@ const { AIR_DRAFT_MARGIN_FEET, MAX_MAST_HEIGHT_FEET, airDraftFor } = await impor
 import type { Location } from "@/domain/location";
 import type { RouteEdge } from "@/domain/route";
 import type { TidalPass } from "@/domain/pass";
+import type { SharedTripState } from "@/application/shareable-trip-url";
 
 const at = (slug: string, lat: number): Location => ({
   slug,
@@ -90,6 +91,88 @@ beforeEach(() => {
 });
 
 describe("useTripPlan", () => {
+  describe("shared trip hydration", () => {
+    const sharedTrip = (pinnedDays: readonly number[] = []): SharedTripState => ({
+      version: 1,
+      days: 2,
+      minHours: 4,
+      maxHours: 7,
+      speedKnots: 7,
+      startSlug: "home",
+      firstDestinationSlug: "b",
+      startDate: "2026-08-15",
+      departureMinutes: 9 * 60 + 15,
+      mastHeightFeet: 62,
+      windAware: false,
+      roundTrip: false,
+      customEndSlug: null,
+      stopSlugs: ["home", "b", "c2"],
+      pinnedDays,
+    });
+
+    it("uses the server-decoded state on its first render", () => {
+      const { result } = renderHook(() => useTripPlan(composition(), sharedTrip()));
+
+      expect(result.current).toMatchObject({
+        days: 2,
+        minHours: 4,
+        maxHours: 7,
+        speedKnots: 7,
+        startSlug: "home",
+        firstDestinationSlug: "b",
+        startDate: "2026-08-15",
+        departureMinutes: 555,
+        mastHeightFeet: 62,
+        windAware: false,
+        roundTrip: false,
+        customEndSlug: null,
+        stopSlugs: ["home", "b", "c2"],
+      });
+    });
+
+    it("preserves shared automatic stops without presenting them as pins", () => {
+      const { result } = renderHook(() => useTripPlan(composition(), sharedTrip()));
+
+      expect(result.current.tripDays[1]?.toSlug).toBe("c2");
+      expect(result.current.isPinned(2)).toBe(false);
+      expect(result.current.pinnedDays).toEqual([]);
+    });
+
+    it("releases shared automatic stops when a routing input changes", () => {
+      const { result } = renderHook(() => useTripPlan(composition(), sharedTrip()));
+
+      act(() => {
+        result.current.setMinHours(3);
+        result.current.setMaxHours(4);
+      });
+
+      expect(result.current.tripDays[1]?.toSlug).toBe("c1");
+      expect(result.current.isPinned(2)).toBe(false);
+    });
+
+    it("keeps an explicit shared pin when other routing inputs change", () => {
+      const { result } = renderHook(() => useTripPlan(composition(), sharedTrip([2])));
+
+      expect(result.current.isPinned(2)).toBe(true);
+      act(() => {
+        result.current.setMinHours(3);
+        result.current.setMaxHours(4);
+      });
+
+      expect(result.current.tripDays[1]?.toSlug).toBe("c2");
+      expect(result.current.isPinned(2)).toBe(true);
+    });
+
+    it("keeps shared automatic stops when only the departure time changes", () => {
+      const { result } = renderHook(() => useTripPlan(composition(), sharedTrip()));
+
+      act(() => result.current.setDepartureMinutes(600));
+
+      expect(result.current.tripDays[1]?.toSlug).toBe("c2");
+      expect(result.current.isPinned(2)).toBe(false);
+    });
+  });
+
   describe("day length", () => {
     it("derives the distance window from hours and speed", () => {
       const { result } = renderHook(() => useTripPlan(composition()));
