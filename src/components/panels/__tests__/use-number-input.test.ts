@@ -42,6 +42,16 @@ describe("useNumberInput", () => {
     expect(result.current.inputValue).toBe("5.");
   });
 
+  it("does not call onChange when a valid mid-edit string parses to the current value", () => {
+    const onChange = vi.fn();
+    const { result } = renderHook(() => useNumberInput(5, onChange));
+
+    act(() => result.current.onInputChange(makeEvent("5.")));
+
+    expect(onChange).not.toHaveBeenCalled();
+    expect(result.current.inputValue).toBe("5.");
+  });
+
   it("resets the display to the last valid value on blur when empty", () => {
     const { result } = renderHook(() => useNumberInput(6, vi.fn()));
 

@@ -23,31 +23,31 @@ export function useNumberInput(
   onInputChange: (e: React.ChangeEvent<HTMLInputElement>) => void;
   onBlur: () => void;
 } {
-  // Store both the last committed external value and the displayed string so
-  // we can detect external changes without an effect or reading refs in render.
-  const [state, setState] = useState({ committedValue: value, inputValue: String(value) });
+  const [inputValue, setInputValue] = useState(String(value));
+  const [lastCommittedValue, setLastCommittedValue] = useState(value);
 
-  // Derived-state update: when `value` changes from outside, reset the string
-  // unless it already represents the same number and the field isn't empty.
+  // Keep local string in sync when the parent value changes externally
+  // (e.g. URL hydration, clamping feedback from the hook).
   // React supports calling setState during render for derived-state (equivalent
-  // to the class-based getDerivedStateFromProps pattern). Storing committedValue
-  // in state ensures this only fires once per distinct incoming value, preventing
-  // any render loop.
-  let inputValue = state.inputValue;
-  if (state.committedValue !== value) {
-    const next =
-      state.inputValue === "" || Number(state.inputValue) !== value
-        ? String(value)
-        : state.inputValue;
-    setState({ committedValue: value, inputValue: next });
-    inputValue = next;
+  // to the class-based getDerivedStateFromProps pattern). Storing
+  // lastCommittedValue in state ensures this only fires once per distinct
+  // incoming value, preventing any render loop.
+  if (value !== lastCommittedValue) {
+    setLastCommittedValue(value);
+    // Overwrite if the current string is empty (mid-delete), or if it no
+    // longer represents the same number — avoids stomping "5." while the user
+    // is mid-typing, but also handles the edge case where value is 0 and the
+    // field has been cleared (Number("") === 0 would otherwise skip the sync).
+    if (inputValue === "" || Number(inputValue) !== value) {
+      setInputValue(String(value));
+    }
   }
 
   function onInputChange(e: React.ChangeEvent<HTMLInputElement>) {
     const raw = e.target.value;
-    setState((prev) => ({ ...prev, inputValue: raw }));
+    setInputValue(raw);
     const parsed = Number(raw);
-    if (raw !== "" && Number.isFinite(parsed)) {
+    if (raw !== "" && Number.isFinite(parsed) && parsed !== value) {
       onChange(parsed);
     }
   }
@@ -56,7 +56,7 @@ export function useNumberInput(
     const parsed = Number(inputValue);
     if (inputValue === "" || !Number.isFinite(parsed)) {
       // Reset display to last valid committed value.
-      setState((prev) => ({ ...prev, inputValue: String(value) }));
+      setInputValue(String(value));
     }
   }
 
