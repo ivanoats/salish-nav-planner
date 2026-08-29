@@ -157,7 +157,7 @@ export function ShareRouteControls({ state }: ShareRouteControlsProps) {
           : currentResult === "copied"
             ? "Link copied."
             : currentResult === "error"
-              ? "Couldn't share the link. Copy it from the address bar."
+              ? "Couldn’t complete that action. Copy the link from the address bar."
               : null}
       </p>
     </div>
