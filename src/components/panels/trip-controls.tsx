@@ -1,6 +1,7 @@
 "use client";
 
 import { css } from "styled-system/css";
+import { useNumberInput } from "./use-number-input";
 import { formatClock, parseClock } from "@/domain/clock";
 import { isIsoDate, type IsoDate } from "@/domain/calendar";
 import {
@@ -109,6 +110,9 @@ export function TripControls({
   onWindAwareChange,
 }: TripControlsProps) {
   const note = windStatusNote(windAware, hasWind, windStatus);
+  const minHoursInput = useNumberInput(minHours, onMinHoursChange);
+  const maxHoursInput = useNumberInput(maxHours, onMaxHoursChange);
+  const speedInput = useNumberInput(speedKnots, onSpeedChange);
 
   return (
     <div className={css({ display: "flex", flexDirection: "column", gap: "3" })}>
@@ -212,8 +216,9 @@ export function TripControls({
             min={MIN_DAY_HOURS}
             max={maxHours}
             step={0.5}
-            value={minHours}
-            onChange={(e) => onMinHoursChange(Number(e.target.value))}
+            value={minHoursInput.inputValue}
+            onChange={minHoursInput.onInputChange}
+            onBlur={minHoursInput.onBlur}
             className={numberInput}
           />
         </div>
@@ -227,8 +232,9 @@ export function TripControls({
             min={minHours}
             max={MAX_DAY_HOURS}
             step={0.5}
-            value={maxHours}
-            onChange={(e) => onMaxHoursChange(Number(e.target.value))}
+            value={maxHoursInput.inputValue}
+            onChange={maxHoursInput.onInputChange}
+            onBlur={maxHoursInput.onBlur}
             className={numberInput}
           />
         </div>
@@ -242,8 +248,9 @@ export function TripControls({
             min={MIN_SPEED_KNOTS}
             max={MAX_SPEED_KNOTS}
             step={0.5}
-            value={speedKnots}
-            onChange={(e) => onSpeedChange(Number(e.target.value))}
+            value={speedInput.inputValue}
+            onChange={speedInput.onInputChange}
+            onBlur={speedInput.onBlur}
             className={numberInput}
           />
         </div>
