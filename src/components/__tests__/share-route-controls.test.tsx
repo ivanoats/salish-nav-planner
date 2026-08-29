@@ -1,5 +1,5 @@
 import { act, fireEvent, render, renderHook, screen, waitFor } from "@testing-library/react";
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { SharedTripState } from "@/application/shareable-trip-url";
 import {
   SharedTripWarning,
@@ -31,6 +31,17 @@ const sharedTrip: SharedTripState = {
 beforeEach(() => {
   window.history.replaceState({}, "", "/?campaign=summer#map");
   vi.restoreAllMocks();
+});
+
+afterEach(() => {
+  Object.defineProperty(navigator, "share", {
+    configurable: true,
+    value: undefined,
+  });
+  Object.defineProperty(navigator, "clipboard", {
+    configurable: true,
+    value: undefined,
+  });
 });
 
 describe("shared trip URL synchronization", () => {
@@ -135,7 +146,7 @@ describe("ShareRouteControls", () => {
 
     await waitFor(() =>
       expect(screen.getByRole("status").textContent).toBe(
-        "Couldn't share the link. Copy it from the address bar."
+        "Couldn’t complete that action. Copy the link from the address bar."
       )
     );
   });
@@ -186,7 +197,7 @@ describe("ShareRouteControls", () => {
 
     await waitFor(() =>
       expect(screen.getByRole("status").textContent).toBe(
-        "Couldn't share the link. Copy it from the address bar."
+        "Couldn’t complete that action. Copy the link from the address bar."
       )
     );
   });
