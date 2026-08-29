@@ -135,7 +135,58 @@ describe("ShareRouteControls", () => {
 
     await waitFor(() =>
       expect(screen.getByRole("status").textContent).toBe(
-        "Couldn’t copy the link. Copy it from the address bar."
+        "Couldn't share the link. Copy it from the address bar."
+      )
+    );
+  });
+
+  it("uses the native share sheet and announces success when share is available", async () => {
+    const share = vi.fn(() => Promise.resolve());
+    Object.defineProperty(navigator, "share", {
+      configurable: true,
+      value: share,
+    });
+    render(<ShareRouteControls state={sharedTrip} />);
+
+    await act(async () => {
+      fireEvent.click(screen.getByRole("button", { name: "Share" }));
+      await share.mock.results[0]?.value;
+    });
+
+    expect(share).toHaveBeenCalledWith(
+      expect.objectContaining({ url: expect.stringContaining("?v=1&days=2") })
+    );
+    expect(screen.getByRole("status").textContent).toBe("Route shared.");
+  });
+
+  it("does not announce an error when the user cancels the share sheet", async () => {
+    const abortError = new DOMException("Share cancelled", "AbortError");
+    const share = vi.fn(() => Promise.reject(abortError));
+    Object.defineProperty(navigator, "share", {
+      configurable: true,
+      value: share,
+    });
+    render(<ShareRouteControls state={sharedTrip} />);
+
+    fireEvent.click(screen.getByRole("button", { name: "Share" }));
+
+    await waitFor(() => expect(share).toHaveBeenCalled());
+    expect(screen.getByRole("status").textContent).toBe("");
+  });
+
+  it("announces an error when the share sheet fails for a non-abort reason", async () => {
+    const share = vi.fn(() => Promise.reject(new Error("share failed")));
+    Object.defineProperty(navigator, "share", {
+      configurable: true,
+      value: share,
+    });
+    render(<ShareRouteControls state={sharedTrip} />);
+
+    fireEvent.click(screen.getByRole("button", { name: "Share" }));
+
+    await waitFor(() =>
+      expect(screen.getByRole("status").textContent).toBe(
+        "Couldn't share the link. Copy it from the address bar."
       )
     );
   });
