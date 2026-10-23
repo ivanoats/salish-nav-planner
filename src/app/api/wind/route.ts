@@ -1,14 +1,14 @@
 import { loadDataset } from "@/adapters/inbound/next/load-dataset";
 import { OpenMeteoWindForecast } from "@/adapters/outbound/open-meteo-wind-forecast";
 import {
-  SyntheticWindForecast,
+  syntheticWindForecast,
   usesSyntheticConditions,
 } from "@/adapters/outbound/synthetic-conditions";
 import { isIsoDate, todayIso } from "@/domain/calendar";
 import { MAX_TRIP_DAYS } from "@/domain/trip";
 
 // Offline in the e2e suite: this call runs on the server, out of a browser test's reach.
-const provider = usesSyntheticConditions() ? new SyntheticWindForecast() : new OpenMeteoWindForecast();
+const provider = usesSyntheticConditions() ? syntheticWindForecast : new OpenMeteoWindForecast();
 
 /**
  * Daily wind for every zone over a trip's dates.

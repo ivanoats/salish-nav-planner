@@ -22,7 +22,7 @@ import type { ZoneWindForecast } from "@/domain/wind-field";
 export const usesSyntheticConditions = (): boolean => process.env.SYNTHETIC_CONDITIONS === "1";
 
 /** A steady moderate southwesterly in every zone, every day asked for. */
-export class SyntheticWindForecast implements WindForecastProvider {
+export const syntheticWindForecast: WindForecastProvider = {
   forecast({ zones, startDate, days }: WindForecastRequest): Promise<readonly ZoneWindForecast[]> {
     return Promise.resolve(zones.map((zone) => ({
       zoneId: zone.id,
@@ -35,8 +35,8 @@ export class SyntheticWindForecast implements WindForecastProvider {
         precipitationChance: 10,
       })),
     })));
-  }
-}
+  },
+};
 
 const MINUTE_MS = 60_000;
 
@@ -49,7 +49,7 @@ const CYCLE: readonly CurrentEventType[] = ["slack", "maxFlood", "slack", "maxEb
  * A clean semidiurnal current, phased off the Unix epoch so every pass
  * and every request agrees on when slack falls.
  */
-export class SyntheticCurrentPredictions implements CurrentPredictionsProvider {
+export const syntheticCurrentPredictions: CurrentPredictionsProvider = {
   predictions({ fromMs, toMs }: CurrentPredictionsRequest): Promise<readonly CurrentEvent[]> {
     const events: CurrentEvent[] = [];
     for (let step = Math.floor(fromMs / QUARTER_CYCLE_MS); step * QUARTER_CYCLE_MS <= toMs; step++) {
@@ -59,5 +59,5 @@ export class SyntheticCurrentPredictions implements CurrentPredictionsProvider {
       events.push({ type, atMs, speedKnots: type === "slack" ? 0 : 3.5 });
     }
     return Promise.resolve(events);
-  }
-}
+  },
+};
