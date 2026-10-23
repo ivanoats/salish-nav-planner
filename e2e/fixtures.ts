@@ -1,4 +1,6 @@
-import { test as base, expect, type Page } from "@playwright/test";
+import { test as base, type Page } from "@playwright/test";
+
+export { expect } from "@playwright/test";
 
 /** 1×1 transparent PNG, served in place of every basemap tile. */
 const BLANK_TILE = Buffer.from(
@@ -30,8 +32,6 @@ export const test = base.extend<PlannerFixtures>({
     await provide(errors);
   },
 });
-
-export { expect };
 
 /** Picks a location in one of the planner's comboboxes by typing part of its name. */
 export const pickLocation = async (page: Page, field: string | RegExp, name: string) => {

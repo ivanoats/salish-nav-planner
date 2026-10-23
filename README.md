@@ -195,7 +195,7 @@ npm run mesh         # rebuild public/data/salish-mesh.json
 
 `npm run test:e2e` builds the app, starts it on port 3100 and runs the
 Playwright specs in `e2e/` against it (first time:
-`npx playwright install chromium`). Two runtime switches keep it
+`npm run test:e2e:install`). Two runtime switches keep it
 self-contained:
 
 - `SCRAPED_DATA_DIR=e2e/fixtures/dataset` reads `edges.json` and

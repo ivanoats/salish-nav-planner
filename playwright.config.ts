@@ -25,10 +25,13 @@ export default defineConfig({
   projects: [{ name: "chromium", use: { ...devices["Desktop Chrome"] } }],
   webServer: {
     // CI has just built the app in an earlier step; locally the suite
-    // builds for itself unless a server is already up on the port.
+    // builds for itself unless a server is already up on the port. The
+    // bare binaries resolve from node_modules/.bin, which `npm run` and
+    // the Playwright CLI both put on PATH — never `npx`, which would
+    // fetch whatever it couldn't find.
     command: process.env.CI
-      ? `npx next start --port ${PORT}`
-      : `npm run maplibre-worker && npx panda codegen --silent && npx next build && npx next start --port ${PORT}`,
+      ? `next start --port ${PORT}`
+      : `npm run maplibre-worker && panda codegen --silent && next build && next start --port ${PORT}`,
     url: BASE_URL,
     reuseExistingServer: !process.env.CI,
     timeout: 300_000,

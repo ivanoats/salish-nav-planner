@@ -20,6 +20,7 @@
     "test:coverage": "vitest run --coverage",
     "test:watch": "vitest",
     "test:e2e": "playwright test",
+    "test:e2e:install": "playwright install --with-deps chromium",
     "scrape": "tsx scripts/scrape-nwcruising.ts",
     "build:passes": "tsx scripts/build-passes.ts",
     "mesh:coastline": "node scripts/mesh/fetch-coastline.mjs && node scripts/mesh/fetch-inland-water.mjs",
