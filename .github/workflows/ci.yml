@@ -43,3 +43,21 @@ jobs:
         env:
           ALLOW_EMPTY_DATASET: "1"
         run: npm run build
+
+      # The e2e suite starts the build above with its own runtime data —
+      # see playwright.config.ts — so it needs no scrape either.
+      - name: Install Playwright browser
+        run: npm run test:e2e:install
+
+      - name: Test end to end
+        run: npm run test:e2e
+
+      - name: Upload Playwright report
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-report
+          path: |
+            playwright-report/
+            test-results/
+          retention-days: 7

@@ -48,10 +48,12 @@ const givenFiles = (over: Record<string, unknown | null> = {}) => {
 beforeEach(() => {
   readFileMock.mockReset();
   delete process.env.ALLOW_EMPTY_DATASET;
+  delete process.env.SCRAPED_DATA_DIR;
 });
 
 afterEach(() => {
   delete process.env.ALLOW_EMPTY_DATASET;
+  delete process.env.SCRAPED_DATA_DIR;
 });
 
 describe("loadDataset", () => {
@@ -63,6 +65,22 @@ describe("loadDataset", () => {
     expect(locations).toEqual([
       { slug: "shilshole", name: "shilshole", region: "US", lat: 47.6775, lon: -122.4112 },
     ]);
+  });
+
+  it("reads only the scraped files from SCRAPED_DATA_DIR when it is set", async () => {
+    givenFiles();
+    process.env.SCRAPED_DATA_DIR = "e2e/fixtures/dataset";
+
+    await loadDataset();
+
+    const dirOf = (name: string) =>
+      readFileMock.mock.calls
+        .map(([path]) => String(path))
+        .find((path) => path.endsWith(name))
+        ?.replace(/[/\\][^/\\]+$/, "");
+    expect(dirOf("edges.json")).toMatch(/e2e[/\\]fixtures[/\\]dataset$/);
+    expect(dirOf("locations.geojson")).toMatch(/e2e[/\\]fixtures[/\\]dataset$/);
+    expect(dirOf("passes.json")).toMatch(/public[/\\]data$/);
   });
 
   describe("when the scraped route data is missing", () => {

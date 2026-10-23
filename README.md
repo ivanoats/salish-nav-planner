@@ -182,6 +182,7 @@ npm run typecheck   # panda codegen + tsc --noEmit
 npm run test         # vitest run
 npm run test:coverage # vitest run --coverage
 npm run test:watch  # vitest watch mode
+npm run test:e2e     # playwright, against a production build (see below)
 npm run lint         # eslint
 npm run scrape       # re-run the nwcruising.net crawler
 npm run dataset      # fetch hosted route data (needs the R2_* vars)
@@ -189,6 +190,25 @@ npm run build:passes # rebuild public/data/passes.json from NOAA + CHS
 npm run mesh:coastline # cache the OSM shoreline the mesh is traced from
 npm run mesh         # rebuild public/data/salish-mesh.json
 ```
+
+### End-to-end tests
+
+`npm run test:e2e` builds the app, starts it on port 3100 and runs the
+Playwright specs in `e2e/` against it (first time:
+`npm run test:e2e:install`). Two runtime switches keep it
+self-contained:
+
+- `SCRAPED_DATA_DIR=e2e/fixtures/dataset` reads `edges.json` and
+  `locations.geojson` from a small synthetic dataset: seven real
+  harbours, with distances worked out from their positions rather than
+  taken from the scrape. A local scrape in `public/data/` is never read
+  or overwritten.
+- `SYNTHETIC_CONDITIONS=1` answers `/api/wind` and `/api/currents` from
+  deterministic offline providers instead of Open-Meteo, NOAA and CHS.
+
+Basemap tiles are stubbed in the browser, so a run makes no requests to
+OpenStreetMap. If a server is already up on port 3100 locally, the suite
+reuses it.
 
 ## Weather and tides
 

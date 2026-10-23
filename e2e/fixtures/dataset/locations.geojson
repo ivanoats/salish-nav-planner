@@ -1,0 +1,110 @@
+{
+  "type": "FeatureCollection",
+  "features": [
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -122.60557,
+          48.51198
+        ]
+      },
+      "properties": {
+        "slug": "anacortes",
+        "name": "Anacortes",
+        "region": "US"
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -122.49827,
+          48.75386
+        ]
+      },
+      "properties": {
+        "slug": "bellingham",
+        "name": "Bellingham",
+        "region": "US"
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -123.00251,
+          48.61999
+        ]
+      },
+      "properties": {
+        "slug": "deer_harbor",
+        "name": "Deer Harbor",
+        "region": "US"
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -122.49646,
+          48.40072
+        ]
+      },
+      "properties": {
+        "slug": "la_conner",
+        "name": "La Conner",
+        "region": "US"
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -122.63666,
+          48.2849
+        ]
+      },
+      "properties": {
+        "slug": "oak_harbor",
+        "name": "Oak Harbor",
+        "region": "US"
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -122.68616,
+          47.92162
+        ]
+      },
+      "properties": {
+        "slug": "port_ludlow",
+        "name": "Port Ludlow",
+        "region": "US"
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -122.77154,
+          48.10728
+        ]
+      },
+      "properties": {
+        "slug": "port_townsend",
+        "name": "Port Townsend",
+        "region": "US"
+      }
+    }
+  ]
+}

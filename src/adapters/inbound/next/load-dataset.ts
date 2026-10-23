@@ -9,6 +9,17 @@ import type { WindZone } from "@/domain/wind-zone";
 
 const DATA_DIR = join(process.cwd(), "public", "data");
 
+/**
+ * Where the two scraped files are read from. Normally beside the
+ * committed data, but the e2e suite points this at its own small
+ * synthetic dataset (`e2e/fixtures/dataset/`) so it never needs the
+ * scrape and never overwrites a local copy of it.
+ */
+const scrapedDataDir = (): string => {
+  const override = process.env.SCRAPED_DATA_DIR?.trim();
+  return override === undefined || override === "" ? DATA_DIR : join(process.cwd(), override);
+};
+
 interface LocationFeature {
   readonly type: "Feature";
   readonly geometry: { readonly type: "Point"; readonly coordinates: readonly [number, number] };
@@ -50,8 +61,8 @@ export interface Dataset {
   readonly obstructions: readonly Obstruction[];
 }
 
-const readJson = async <T>(fileName: string): Promise<T> => {
-  const text = await readFile(join(DATA_DIR, fileName), "utf-8");
+const readJson = async <T>(fileName: string, dir: string = DATA_DIR): Promise<T> => {
+  const text = await readFile(join(dir, fileName), "utf-8");
   return JSON.parse(text) as T;
 };
 
@@ -90,7 +101,7 @@ const readScrapedJson = async <T>(
   lostWithoutIt: string
 ): Promise<T> => {
   try {
-    return await readJson<T>(fileName);
+    return await readJson<T>(fileName, scrapedDataDir());
   } catch (error) {
     if (!isMissingFile(error)) throw error;
 

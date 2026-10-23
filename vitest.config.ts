@@ -18,6 +18,8 @@ export default defineConfig({
   test: {
     environment: "jsdom",
     globals: true,
+    // Playwright's, run with `npm run test:e2e`.
+    exclude: ["**/node_modules/**", "e2e/**"],
     coverage: {
       provider: "v8",
       reporter: ["text", "lcov"],
