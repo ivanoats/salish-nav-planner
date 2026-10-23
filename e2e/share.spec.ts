@@ -9,8 +9,9 @@ test("a copied link reopens the same plan", async ({ page, context, pageErrors }
   await page.goto("/");
   await pickLocation(page, "Start", "Anacortes");
   await pickLocation(page, "Destination", "Deer Harbor");
-  // Captured once the currents have landed, so both pages are compared
-  // in the same, settled state.
+  // Captured once both the forecast and the currents have landed, since
+  // each fills in part of the day's text.
+  await expect(dayItems(page).first()).toContainText("SW 12–18 kt");
   await expect(dayItems(page).first()).toContainText(/slack \d{2}:\d{2}/);
   const planned = await dayItems(page).first().innerText();
 
@@ -22,8 +23,8 @@ test("a copied link reopens the same plan", async ({ page, context, pageErrors }
   await reopened.goto(link);
   await expect(reopened.getByRole("combobox", { name: "Start" })).toHaveValue("Anacortes");
   await expect(reopened.getByRole("combobox", { name: "Destination" })).toHaveValue("Deer Harbor");
-  await expect(dayItems(reopened).first()).toContainText(/slack \d{2}:\d{2}/);
-  expect(await dayItems(reopened).first().innerText()).toBe(planned);
+  // Retried, so the reopened tab gets the same chance to settle.
+  await expect.poll(() => dayItems(reopened).first().innerText()).toBe(planned);
   await expect(reopened.getByText("Shared link problem")).toHaveCount(0);
 
   expect(pageErrors).toEqual([]);
