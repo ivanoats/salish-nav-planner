@@ -1,0 +1,170 @@
+[
+  {
+    "from": "anacortes",
+    "to": "bellingham",
+    "nm": 19.7,
+    "hrMin": "2:49",
+    "via": [],
+    "routeUrl": "e2e-fixture"
+  },
+  {
+    "from": "bellingham",
+    "to": "anacortes",
+    "nm": 19.7,
+    "hrMin": "2:49",
+    "via": [],
+    "routeUrl": "e2e-fixture"
+  },
+  {
+    "from": "anacortes",
+    "to": "deer_harbor",
+    "nm": 22.2,
+    "hrMin": "3:10",
+    "via": [],
+    "routeUrl": "e2e-fixture"
+  },
+  {
+    "from": "deer_harbor",
+    "to": "anacortes",
+    "nm": 22.2,
+    "hrMin": "3:10",
+    "via": [],
+    "routeUrl": "e2e-fixture"
+  },
+  {
+    "from": "anacortes",
+    "to": "la_conner",
+    "nm": 10.4,
+    "hrMin": "1:29",
+    "via": [],
+    "routeUrl": "e2e-fixture"
+  },
+  {
+    "from": "la_conner",
+    "to": "anacortes",
+    "nm": 10.4,
+    "hrMin": "1:29",
+    "via": [],
+    "routeUrl": "e2e-fixture"
+  },
+  {
+    "from": "anacortes",
+    "to": "port_townsend",
+    "nm": 32.7,
+    "hrMin": "4:40",
+    "via": [],
+    "routeUrl": "e2e-fixture"
+  },
+  {
+    "from": "port_townsend",
+    "to": "anacortes",
+    "nm": 32.7,
+    "hrMin": "4:40",
+    "via": [],
+    "routeUrl": "e2e-fixture"
+  },
+  {
+    "from": "anacortes",
+    "to": "port_ludlow",
+    "nm": 46.3,
+    "hrMin": "6:37",
+    "via": [
+      "Admiralty Inlet"
+    ],
+    "routeUrl": "e2e-fixture"
+  },
+  {
+    "from": "port_ludlow",
+    "to": "anacortes",
+    "nm": 46.3,
+    "hrMin": "6:37",
+    "via": [
+      "Admiralty Inlet"
+    ],
+    "routeUrl": "e2e-fixture"
+  },
+  {
+    "from": "bellingham",
+    "to": "deer_harbor",
+    "nm": 28,
+    "hrMin": "4:00",
+    "via": [],
+    "routeUrl": "e2e-fixture"
+  },
+  {
+    "from": "deer_harbor",
+    "to": "bellingham",
+    "nm": 28,
+    "hrMin": "4:00",
+    "via": [],
+    "routeUrl": "e2e-fixture"
+  },
+  {
+    "from": "la_conner",
+    "to": "oak_harbor",
+    "nm": 11.6,
+    "hrMin": "1:39",
+    "via": [],
+    "routeUrl": "e2e-fixture"
+  },
+  {
+    "from": "oak_harbor",
+    "to": "la_conner",
+    "nm": 11.6,
+    "hrMin": "1:39",
+    "via": [],
+    "routeUrl": "e2e-fixture"
+  },
+  {
+    "from": "la_conner",
+    "to": "port_townsend",
+    "nm": 27,
+    "hrMin": "3:51",
+    "via": [
+      "Deception Pass"
+    ],
+    "routeUrl": "e2e-fixture"
+  },
+  {
+    "from": "port_townsend",
+    "to": "la_conner",
+    "nm": 27,
+    "hrMin": "3:51",
+    "via": [
+      "Deception Pass"
+    ],
+    "routeUrl": "e2e-fixture"
+  },
+  {
+    "from": "port_ludlow",
+    "to": "port_townsend",
+    "nm": 15.2,
+    "hrMin": "2:10",
+    "via": [],
+    "routeUrl": "e2e-fixture"
+  },
+  {
+    "from": "port_townsend",
+    "to": "port_ludlow",
+    "nm": 15.2,
+    "hrMin": "2:10",
+    "via": [],
+    "routeUrl": "e2e-fixture"
+  },
+  {
+    "from": "deer_harbor",
+    "to": "port_townsend",
+    "nm": 41.8,
+    "hrMin": "5:58",
+    "via": [],
+    "routeUrl": "e2e-fixture"
+  },
+  {
+    "from": "port_townsend",
+    "to": "deer_harbor",
+    "nm": 41.8,
+    "hrMin": "5:58",
+    "via": [],
+    "routeUrl": "e2e-fixture"
+  }
+]

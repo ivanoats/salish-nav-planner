@@ -1,8 +1,13 @@
 import { loadDataset } from "@/adapters/inbound/next/load-dataset";
 import { RegionalCurrentPredictions } from "@/adapters/outbound/regional-current-predictions";
+import {
+  SyntheticCurrentPredictions,
+  usesSyntheticConditions,
+} from "@/adapters/outbound/synthetic-conditions";
 import type { CurrentEvent } from "@/domain/tidal";
 
-const provider = new RegionalCurrentPredictions();
+// Offline in the e2e suite: this call runs on the server, out of a browser test's reach.
+const provider = usesSyntheticConditions() ? new SyntheticCurrentPredictions() : new RegionalCurrentPredictions();
 
 /**
  * A week of cruising crosses a few passes a day, so this sits well above
