@@ -70,10 +70,14 @@ test("draws the route over the navigation mesh", async ({ page, pageErrors }) =>
   expect((await mesh).ok()).toBe(true);
 
   // A straight line between two stops is two points; one walked through
-  // the mesh bends around the islands in between.
-  await expect.poll(() => drawnRoute(page)).toEqual([{ day: 1, points: expect.any(Number) }]);
-  const [route] = await drawnRoute(page);
-  expect(route?.points).toBeGreaterThan(2);
+  // the mesh bends around the islands in between. The straight line is
+  // drawn first, while the mesh is still parsing, so the poll waits past it.
+  await expect
+    .poll(async () => {
+      const days = await drawnRoute(page);
+      return days.length === 1 && days[0]?.day === 1 ? days[0].points : 0;
+    })
+    .toBeGreaterThan(2);
 
   expect(warnings.filter((text) => text.includes("[map]"))).toEqual([]);
   expect(pageErrors).toEqual([]);
