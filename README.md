@@ -201,8 +201,11 @@ self-contained:
 - `SCRAPED_DATA_DIR=e2e/fixtures/dataset` reads `edges.json` and
   `locations.geojson` from a small synthetic dataset: seven real
   harbours, with distances worked out from their positions rather than
-  taken from the scrape. A local scrape in `public/data/` is never read
-  or overwritten.
+  taken from the scrape. The one exception is set by hand: Port Ludlow
+  to Port Townsend is 13 nm through the Port Townsend Canal or 20 nm
+  the long way, so the mast-height tests have a fixed span to route
+  around. A local scrape in `public/data/` is never read or
+  overwritten.
 - `SYNTHETIC_CONDITIONS=1` answers `/api/wind` and `/api/currents` from
   deterministic offline providers instead of Open-Meteo, NOAA and CHS.
 
