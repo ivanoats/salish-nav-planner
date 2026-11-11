@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { css } from "styled-system/css";
 import { createComposition } from "@/composition-root";
 import { LocationPicker } from "@/components/panels/location-picker";
@@ -23,6 +23,7 @@ import type {
   SharedTripState,
 } from "@/application/shareable-trip-url";
 import type { Location, Waypoint } from "@/domain/location";
+import { buildMeshGraph, type MeshFeatureCollection, type MeshGraph } from "@/domain/mesh-route";
 import type { Obstruction } from "@/domain/obstruction";
 import type { TidalPass } from "@/domain/pass";
 import type { RouteEdge } from "@/domain/route";
@@ -58,9 +59,28 @@ export function PlannerShell({
     [locations, edges, waypoints, passes, windZones, obstructions]
   );
 
-  const trip = useTripPlan(composition, initialTripState);
+  const [mesh, setMesh] = useState<MeshGraph | null>(null);
+  const trip = useTripPlan(composition, initialTripState, mesh);
   const sharedTripState = sharedTripStateFromPlan(trip);
   useShareableTripUrl(sharedTripState, hasIncomingSharedTrip);
+
+  const hasRoutes = trip.tripDays.some((day) => day.route !== null);
+  useEffect(() => {
+    if (!hasRoutes || mesh !== null) return;
+    const controller = new AbortController();
+
+    const load = async () => {
+      const response = await fetch("/data/salish-mesh.json", { signal: controller.signal });
+      if (!response.ok) throw new Error(`HTTP ${response.status}`);
+      const collection: MeshFeatureCollection = await response.json();
+      if (!controller.signal.aborted) setMesh(buildMeshGraph(collection));
+    };
+
+    load().catch((error: unknown) => {
+      if (!controller.signal.aborted) console.warn("[planner] Navigation mesh unavailable.", error);
+    });
+    return () => controller.abort();
+  }, [hasRoutes, mesh]);
 
   const locationsBySlug = useMemo(
     () => new Map(locations.map((l) => [l.slug, l] as const)),
@@ -73,11 +93,6 @@ export function PlannerShell({
         .map((slug) => locationsBySlug.get(slug))
         .filter((l): l is Location => l !== undefined),
     [trip.stopSlugs, locationsBySlug]
-  );
-
-  const dayRoutes = useMemo(
-    () => trip.tripDays.map((day) => day.route).filter((r) => r !== null),
-    [trip.tripDays]
   );
 
   const hasStartAndFirstStop =
@@ -186,7 +201,7 @@ export function PlannerShell({
           isPinned={trip.isPinned}
         />
 
-        {dayRoutes.length > 0 ? (
+        {hasRoutes ? (
           <RouteSummaryPanel
             tripDays={trip.tripDays}
             totalNm={trip.totalNm}
@@ -201,15 +216,14 @@ export function PlannerShell({
         ) : null}
 
         {sharedTripState !== null ? <ShareRouteControls state={sharedTripState} /> : null}
-        {dayRoutes.length > 0 ? <PrintButton /> : null}
+        {hasRoutes ? <PrintButton /> : null}
       </aside>
 
       <div data-print-map className={css({ flex: "1", minHeight: { base: "80", md: "auto" } })}>
         <MapApp
           locations={locations}
-          waypoints={waypoints}
           stopLocations={stopLocations}
-          routes={dayRoutes}
+          tripDays={trip.tripDays}
           chartPmtilesUrl={chartPmtilesUrl}
         />
       </div>

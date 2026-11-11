@@ -68,6 +68,22 @@ const renderSummary = (tripDays: readonly TripDay[], dayConditions: readonly Day
 
 const forecastLinkName = /regional surface-current forecast on NANOOS Boaters/i;
 
+it("labels an approximate route track in the day summary", () => {
+  renderSummary([{
+    ...firstDay,
+    route: {
+      totalNm: 12,
+      totalHrMin: "2:00",
+      legs: [{
+        from: "start", to: "finish", nm: 12, hrMin: "2:00", via: [],
+        track: { source: "approximate", coordinates: [[-123, 48], [-123, 48.2]] },
+      }],
+    },
+  }]);
+
+  expect(screen.getByText(/approximate track.*may cross land/i)).toBeDefined();
+});
+
 describe("regional surface-current forecast in the route summary", () => {
   it("links once to the verified forecast viewer for a multi-day route without pass stations", () => {
     renderSummary([firstDay, { ...firstDay, dayNumber: 2 }]);

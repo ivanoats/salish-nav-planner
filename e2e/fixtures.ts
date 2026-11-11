@@ -52,6 +52,7 @@ export const drawnRoute = (page: Page) =>
     const data = await map?.getSource("planned-route")?.getData();
     return (data?.features ?? []).map((feature) => ({
       day: feature.properties?.day as number,
+      approximate: feature.properties?.approximate === true,
       points: feature.geometry.type === "LineString" ? feature.geometry.coordinates.length : 0,
     }));
   });

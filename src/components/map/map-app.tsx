@@ -3,8 +3,8 @@
 import dynamic from "next/dynamic";
 import { useState } from "react";
 import { css } from "styled-system/css";
-import type { Location, Waypoint } from "@/domain/location";
-import type { PlannedRoute } from "@/domain/route";
+import type { Location } from "@/domain/location";
+import type { TripDay } from "@/domain/trip";
 
 // maplibre-gl touches `window` at import time — keep this client-only.
 const MapView = dynamic(() => import("./map").then((m) => m.MapView), {
@@ -28,9 +28,8 @@ const MapView = dynamic(() => import("./map").then((m) => m.MapView), {
 
 interface MapAppProps {
   readonly locations: readonly Location[];
-  readonly waypoints: readonly Waypoint[];
   readonly stopLocations: readonly Location[];
-  readonly routes: readonly PlannedRoute[];
+  readonly tripDays: readonly TripDay[];
   readonly chartPmtilesUrl?: string;
 }
 

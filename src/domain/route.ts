@@ -1,3 +1,5 @@
+import type { LonLat } from "./route-line";
+
 /** One scraped nwcruising.net table row: a direct link between two locations. */
 export interface RouteEdge {
   readonly from: string; // Location slug
@@ -20,6 +22,10 @@ export interface RouteLeg {
    * without obstruction geometry.
    */
   readonly obstructionIds?: readonly string[];
+  readonly track?: {
+    readonly source: "mesh" | "approximate";
+    readonly coordinates: readonly LonLat[];
+  };
 }
 
 export interface PlannedRoute {
