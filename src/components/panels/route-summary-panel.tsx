@@ -167,6 +167,20 @@ export function RouteSummaryPanel({
           );
         })}
       </ol>
+
+      <p className={css({ fontSize: "xs", color: "fg.muted" })}>
+        <a
+          href="https://nvs.nanoos.org/Boaters"
+          target="_blank"
+          rel="noopener noreferrer"
+          className={css({ color: "colorPalette.11", textDecoration: "underline" })}
+        >
+          Regional surface-current forecast on NANOOS Boaters (opens in a new tab)
+        </a>
+        <br />
+        In Layers, choose Forecast Arrows → Currents (Surface) and check the map time.
+        If no overlay appears, use Select Closest Data Point and check its timestamp.
+      </p>
     </div>
   );
 }
