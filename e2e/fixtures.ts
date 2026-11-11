@@ -9,26 +9,31 @@ const BLANK_TILE = Buffer.from(
 );
 
 interface PlannerFixtures {
+  readonly offlineTiles: void;
   /** Console errors and uncaught exceptions seen so far on `page`. */
   readonly pageErrors: string[];
 }
 
 /**
- * Every test gets a page that never reaches OpenStreetMap — tiles are
- * answered locally, which keeps runs off a volunteer-run tile server and
- * independent of the network — and a running list of anything the page
- * reported as an error.
+ * The automatic fixture keeps every test off the volunteer-run OpenStreetMap
+ * tile server. `pageErrors` tracks anything the page reported as an error.
  */
 export const test = base.extend<PlannerFixtures>({
+  offlineTiles: [
+    async ({ page }, provide) => {
+      await page.route("https://tile.openstreetmap.org/**", (route) =>
+        route.fulfill({ contentType: "image/png", body: BLANK_TILE })
+      );
+      await provide();
+    },
+    { auto: true },
+  ],
   pageErrors: async ({ page }, provide) => {
     const errors: string[] = [];
     page.on("console", (message) => {
       if (message.type() === "error") errors.push(message.text());
     });
     page.on("pageerror", (error) => errors.push(error.message));
-    await page.route("https://tile.openstreetmap.org/**", (route) =>
-      route.fulfill({ contentType: "image/png", body: BLANK_TILE })
-    );
     await provide(errors);
   },
 });
