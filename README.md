@@ -245,6 +245,13 @@ Currents are astronomical and predictable years ahead; wind is not.
 Anything past the forecast horizon gets no wind at all, and both the
 planner and the UI say so rather than assuming calm.
 
+Each plotted route also links to the regional surface-current forecast
+in [NANOOS Boaters](https://nvs.nanoos.org/Boaters). Open **Layers → Forecast
+Arrows → Currents (Surface)** and check the map time. If no overlay appears,
+use **Select Closest Data Point** and check its timestamp. See
+[ADR 0003](docs/adr/0003-nanoos-surface-current-context.md) for the source
+assessment and how it fits with pass timing.
+
 ## Bridges and air draft
 
 `public/data/obstructions.json` is a hand-curated list of spans with
