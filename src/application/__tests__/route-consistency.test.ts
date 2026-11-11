@@ -85,6 +85,38 @@ describe("route geometry and planning agree", () => {
     });
   });
 
+  it("accepts a Swinomish Channel corridor mesh track instead of checking its distant anchor", () => {
+    const corridor: LonLat[] = [
+      [-122.4955, 48.3925],
+      [-122.5015, 48.4056],
+      [-122.506, 48.4198],
+      [-122.5088, 48.4338],
+    ];
+    const start: LonLat = [-122.49, 48.39];
+    const end: LonLat = [-122.51, 48.44];
+    const channel = {
+      name: "Swinomish Channel",
+      lat: 48.42,
+      lon: -122.5378,
+      corridor: corridor.map(([lon, lat]) => ({ lon, lat })),
+    };
+    const planner = createComposition({
+      locations: [harbour("start", start), harbour("end", end)],
+      edges: [edge("start", "end", 24, [channel.name])],
+      waypoints: [channel],
+      passes: [],
+      windZones: [],
+      obstructions: [],
+    });
+
+    const [day] = planner.planTrip(input, mesh([start, ...corridor, end]));
+
+    expect(day?.route?.legs[0]?.track).toEqual({
+      source: "mesh",
+      coordinates: [start, ...corridor, end],
+    });
+  });
+
   it("keeps a tall rig's plotted detour away from a bridge excluded by the graph", () => {
     const detour: LonLat = [-123.2, 48.3];
     const bridgePoint: LonLat = [-123, 48.2];

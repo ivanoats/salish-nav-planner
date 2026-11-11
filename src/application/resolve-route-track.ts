@@ -1,16 +1,29 @@
 import { projectOntoPolyline } from "@/domain/geo";
 import { meshPathCoordinates, type MeshGraph } from "@/domain/mesh-route";
-import type { Location, Waypoint } from "@/domain/location";
+import type { Coordinates, Location, Waypoint } from "@/domain/location";
 import type { Obstruction } from "@/domain/obstruction";
 import type { TidalPass } from "@/domain/pass";
 import { isNamedPass, NAMED_PASS_MAX_OFFSET_NM } from "@/domain/pass-transit";
 import type { PlannedRoute } from "@/domain/route";
 import { buildDisplayedRouteLineCoordinates, type LonLat } from "@/domain/route-line";
+import { normalizeName } from "@/domain/slug";
 import { buildCoordinateIndex, resolveViaCoordinatesWith } from "@/domain/via-resolution";
 
 const NAMED_TRACK_OFFSET_NM = 1;
 const BRIDGE_TRACK_OFFSET_NM = 0.25;
 const asPoints = (line: readonly LonLat[]) => line.map(([lon, lat]) => ({ lon, lat }));
+
+const buildCorridorLookup = (waypoints: readonly Waypoint[]) => {
+  const byName = new Map<string, readonly Coordinates[]>();
+  for (const waypoint of waypoints) {
+    if (waypoint.corridor === undefined || waypoint.corridor.length === 0) continue;
+    byName.set(normalizeName(waypoint.name), waypoint.corridor);
+    for (const alias of waypoint.aliases ?? []) {
+      byName.set(normalizeName(alias), waypoint.corridor);
+    }
+  }
+  return byName;
+};
 
 /**
  * A mesh line may refine a graph leg if it agrees with the selected
@@ -25,6 +38,7 @@ export const resolveRouteTrack = (
   mesh: MeshGraph | null
 ): PlannedRoute => {
   const index = buildCoordinateIndex([...locationsBySlug.values()], waypoints);
+  const corridorsByName = buildCorridorLookup(waypoints);
 
   return {
     ...route,
@@ -42,7 +56,9 @@ export const resolveRouteTrack = (
 
       const line = asPoints(coordinates);
       const fallbackLine = asPoints(fallback);
-      const viaPoints = resolveViaCoordinatesWith(leg.via, index);
+      const viaPoints = leg.via.flatMap((name) =>
+        corridorsByName.get(normalizeName(name)) ?? resolveViaCoordinatesWith([name], index)
+      );
       const namedPasses = passes.filter((pass) =>
         isNamedPass(pass, leg.via) &&
         (projectOntoPolyline(pass, fallbackLine)?.offsetNm ?? Infinity) <= NAMED_PASS_MAX_OFFSET_NM
