@@ -76,7 +76,7 @@ describe("regional surface-current forecast in the route summary", () => {
     expect(link.getAttribute("href")).toBe("https://nvs.nanoos.org/Boaters");
     expect(link.getAttribute("target")).toBe("_blank");
     expect(link.getAttribute("rel")).toContain("noreferrer");
-    expect(screen.getByText(/Forecast Arrows → Currents \(Surface\)/)).toBeDefined();
+    expect(screen.getByText(/Forecast Arrows → Currents \(Surface\)/u)).toBeDefined();
   });
 
   it("shows station timing and the regional forecast link together", () => {
