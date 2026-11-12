@@ -13,7 +13,7 @@ test("a round trip ends back at the start", async ({ page, pageErrors }) => {
   await expect(page.getByText("39.4 nm", { exact: true })).toBeVisible();
   // A round trip has nowhere else to end, so the end picker goes away.
   await expect(page.getByRole("combobox", { name: "End at (optional)" })).toHaveCount(0);
-  await expect(page).toHaveURL(/[?&]round=1(&|$)/);
+  await expect(page).toHaveURL((url) => url.searchParams.get("r") === "1");
 
   expect(pageErrors).toEqual([]);
 });

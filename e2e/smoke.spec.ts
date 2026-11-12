@@ -51,8 +51,7 @@ test("plans a one-day trip with wind and currents", async ({ page, pageErrors })
   // From the synthetic currents: some pass on the way has a slack time.
   await expect(day.getByRole("listitem").first()).toContainText(/slack \d{2}:\d{2}/);
 
-  await expect(page).toHaveURL(/[?&]start=anacortes(&|$)/);
-  await expect(page).toHaveURL(/[?&]first=deer_harbor(&|$)/);
+  await expect(page).toHaveURL((url) => url.searchParams.get("s") === "anacortes.deer_harbor");
 
   expect(pageErrors).toEqual([]);
 });

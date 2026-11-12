@@ -37,7 +37,7 @@ test("a mast too tall for a fixed bridge routes the long way round", async ({ pa
   await expect(day).toContainText("via Admiralty Inlet");
   await expect(day).not.toContainText("via Port Townsend Canal");
   await expect(day).not.toContainText("Port Townsend Canal Bridge");
-  await expect(page).toHaveURL(/[?&]mast=60(&|$)/);
+  await expect(page).toHaveURL((url) => url.searchParams.get("m") === "60");
 });
 
 test("the day buttons set the trip length", async ({ page }) => {
