@@ -1,4 +1,4 @@
-import { test as base, type Page } from "@playwright/test";
+import { test as base, type BrowserContext, type Page } from "@playwright/test";
 
 export { expect } from "@playwright/test";
 
@@ -7,6 +7,11 @@ const BLANK_TILE = Buffer.from(
   "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNkYAAAAAYAAjCB0C8AAAAASUVORK5CYII=",
   "base64"
 );
+
+export const stubBasemapTiles = (context: BrowserContext) =>
+  context.route("https://tile.openstreetmap.org/**", (route) =>
+    route.fulfill({ contentType: "image/png", body: BLANK_TILE })
+  );
 
 interface PlannerFixtures {
   /** Console errors and uncaught exceptions seen so far on `page`. */
@@ -32,9 +37,7 @@ export const test = base.extend<PlannerFixtures>({
         });
         tab.on("pageerror", (error) => errors.push(error.message));
       };
-      await context.route("https://tile.openstreetmap.org/**", (route) =>
-        route.fulfill({ contentType: "image/png", body: BLANK_TILE })
-      );
+      await stubBasemapTiles(context);
       watch(page);
       context.on("page", watch);
       await provide(errors);

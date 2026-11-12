@@ -1,5 +1,5 @@
 import { isIsoDate, type IsoDate } from "@/domain/calendar";
-import { formatClock, parseClock } from "@/domain/clock";
+import { MINUTES_PER_DAY, parseClock } from "@/domain/clock";
 import {
   MAX_MAST_HEIGHT_FEET,
   MIN_MAST_HEIGHT_FEET,
@@ -13,9 +13,11 @@ import {
   MIN_TRIP_DAYS,
 } from "@/domain/trip";
 
+// Both URL formats decode to the same trip state.
 export const SHARED_TRIP_VERSION = 1 as const;
+const COMPACT_URL_VERSION = "2";
 
-export const SHARED_TRIP_QUERY_KEYS = [
+const LEGACY_QUERY_KEYS = [
   "v",
   "days",
   "min-hours",
@@ -33,7 +35,14 @@ export const SHARED_TRIP_QUERY_KEYS = [
   "pins",
 ] as const;
 
-type SharedTripQueryKey = (typeof SHARED_TRIP_QUERY_KEYS)[number];
+const COMPACT_REQUIRED_KEYS = ["v", "s", "d", "t", "a", "b", "k", "m", "w"] as const;
+const COMPACT_OPTIONAL_KEYS = ["r", "e", "p"] as const;
+
+type LegacyQueryKey = (typeof LEGACY_QUERY_KEYS)[number];
+type SharedTripQueryKey =
+  | LegacyQueryKey
+  | (typeof COMPACT_REQUIRED_KEYS)[number]
+  | (typeof COMPACT_OPTIONAL_KEYS)[number];
 
 export interface SharedTripState {
   readonly version: typeof SHARED_TRIP_VERSION;
@@ -84,23 +93,30 @@ const normalizedNumber = (value: number): string =>
   String(Number(value.toFixed(3)));
 
 export const encodeSharedTrip = (state: SharedTripState): URLSearchParams => {
-  const query = new URLSearchParams();
-  query.set("v", String(SHARED_TRIP_VERSION));
-  query.set("days", String(state.days));
-  query.set("min-hours", normalizedNumber(state.minHours));
-  query.set("max-hours", normalizedNumber(state.maxHours));
-  query.set("speed", normalizedNumber(state.speedKnots));
-  query.set("start", state.startSlug);
-  query.set("first", state.firstDestinationSlug);
-  query.set("date", state.startDate);
-  query.set("depart", formatClock(state.departureMinutes));
-  query.set("mast", normalizedNumber(state.mastHeightFeet));
-  query.set("wind", state.windAware ? "1" : "0");
-  query.set("round", state.roundTrip ? "1" : "0");
-  query.set("end", state.customEndSlug ?? "-");
-  query.set("stops", state.stopSlugs.join(","));
-  query.set("pins", state.pinnedDays.length === 0 ? "-" : state.pinnedDays.join(","));
+  const query = new URLSearchParams({
+    v: COMPACT_URL_VERSION,
+    // The scraper only emits alphanumeric slugs with hyphens or underscores.
+    s: state.stopSlugs.join("."),
+    d: state.startDate,
+    t: String(state.departureMinutes),
+    a: normalizedNumber(state.minHours),
+    b: normalizedNumber(state.maxHours),
+    k: normalizedNumber(state.speedKnots),
+    m: normalizedNumber(state.mastHeightFeet),
+    w: state.windAware ? "1" : "0",
+  });
+  if (state.roundTrip) query.set("r", "1");
+  if (state.customEndSlug !== null) query.set("e", state.customEndSlug);
+  if (state.pinnedDays.length > 0) query.set("p", state.pinnedDays.join("."));
   return query;
+};
+
+export const clearSharedTripParameters = (query: URLSearchParams): void => {
+  if (!query.has("v")) return;
+  const keys = query.get("v") === COMPACT_URL_VERSION
+    ? [...COMPACT_REQUIRED_KEYS, ...COMPACT_OPTIONAL_KEYS]
+    : LEGACY_QUERY_KEYS;
+  for (const key of keys) query.delete(key);
 };
 
 const issue = (
@@ -109,15 +125,19 @@ const issue = (
   message: string
 ): SharedTripIssue => ({ code, parameter, message });
 
-const readFields = (
+const readFields = <Key extends SharedTripQueryKey>(
   query: SearchParamsReader,
-  issues: SharedTripIssue[]
-): Partial<Record<SharedTripQueryKey, string>> => {
-  const fields: Partial<Record<SharedTripQueryKey, string>> = {};
-  for (const key of SHARED_TRIP_QUERY_KEYS) {
+  issues: SharedTripIssue[],
+  required: readonly Key[],
+  optional: readonly Key[] = []
+): Partial<Record<Key, string>> => {
+  const fields: Partial<Record<Key, string>> = {};
+  for (const key of [...required, ...optional]) {
     const values = query.getAll(key);
     if (values.length === 0) {
-      issues.push(issue("missing-parameter", key, `Missing “${key}” from the shared trip.`));
+      if (required.includes(key)) {
+        issues.push(issue("missing-parameter", key, `Missing “${key}” from the shared trip.`));
+      }
     } else if (values.length > 1) {
       issues.push(issue("duplicate-parameter", key, `“${key}” appears more than once.`));
     } else {
@@ -125,6 +145,30 @@ const readFields = (
     }
   }
   return fields;
+};
+
+const readCompactFields = (
+  query: SearchParamsReader,
+  issues: SharedTripIssue[]
+): Partial<Record<LegacyQueryKey, string>> => {
+  const fields = readFields(query, issues, COMPACT_REQUIRED_KEYS, COMPACT_OPTIONAL_KEYS);
+  const stops = fields.s?.split(".");
+  return {
+    days: stops === undefined ? undefined : String(stops.length - 1),
+    start: stops?.[0],
+    first: stops?.[1],
+    stops: stops?.join(","),
+    date: fields.d,
+    depart: fields.t,
+    "min-hours": fields.a,
+    "max-hours": fields.b,
+    speed: fields.k,
+    mast: fields.m,
+    wind: fields.w,
+    round: fields.r ?? "0",
+    end: fields.e ?? "-",
+    pins: fields.p?.replaceAll(".", ",") ?? "-",
+  };
 };
 
 const parseNumber = (
@@ -298,7 +342,7 @@ const validateVersion = (
 };
 
 const parseHourRange = (
-  fields: Partial<Record<SharedTripQueryKey, string>>,
+  fields: Partial<Record<LegacyQueryKey, string>>,
   issues: SharedTripIssue[]
 ): Pick<ParsedSharedTrip, "minHours" | "maxHours"> => {
   const minHours = parseNumber(fields["min-hours"], "min-hours", issues, {
@@ -338,9 +382,10 @@ const parseDeparture = (
 };
 
 const parseSharedTripFields = (
-  fields: Partial<Record<SharedTripQueryKey, string>>,
+  fields: Partial<Record<LegacyQueryKey, string>>,
   knownSlugs: ReadonlySet<string>,
-  issues: SharedTripIssue[]
+  issues: SharedTripIssue[],
+  compact: boolean
 ): ParsedSharedTrip => {
   const days = parseNumber(fields.days, "days", issues, {
     min: MIN_TRIP_DAYS,
@@ -357,7 +402,13 @@ const parseSharedTripFields = (
     max: MAX_MAST_HEIGHT_FEET,
   });
   const startDate = parseStartDate(fields.date, issues);
-  const departureMinutes = parseDeparture(fields.depart, issues);
+  const departureMinutes = compact
+    ? parseNumber(fields.depart, "t", issues, {
+      min: 0,
+      max: MINUTES_PER_DAY - 1,
+      integer: true,
+    })
+    : parseDeparture(fields.depart, issues);
   const windAware = parseBoolean(fields.wind, "wind", issues);
   const roundTrip = parseBoolean(fields.round, "round", issues);
   const startSlug = knownLocation(fields.start, "start", knownSlugs, issues);
@@ -427,9 +478,12 @@ export const decodeSharedTrip = (
   if (!hasSharedTrip) return { state: null, issues: [], hasSharedTrip: false };
 
   const issues: SharedTripIssue[] = [];
-  const fields = readFields(query, issues);
-  validateVersion(fields.v, issues);
-  const parsed = parseSharedTripFields(fields, knownSlugs, issues);
+  const compact = query.getAll("v")[0] === COMPACT_URL_VERSION;
+  const fields = compact
+    ? readCompactFields(query, issues)
+    : readFields(query, issues, LEGACY_QUERY_KEYS);
+  if (!compact) validateVersion(fields.v, issues);
+  const parsed = parseSharedTripFields(fields, knownSlugs, issues, compact);
 
   if (issues.length > 0 || !isCompleteSharedTrip(parsed)) {
     return { state: null, issues, hasSharedTrip };
