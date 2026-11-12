@@ -73,6 +73,23 @@ describe("passTransitsForDay", () => {
     expect(transits.map((t) => t.pass.id)).toEqual(["early", "late"]);
   });
 
+  it("adds the first leg's published mileage before projecting onto the second", () => {
+    const legs: PlannedRoute["legs"] = [
+      { from: "south", to: "middle", nm: 10, hrMin: "1:40", via: [],
+        track: { source: "mesh", coordinates: [[-123, 48], [-123, 48.5]] } },
+      { from: "middle", to: "north", nm: 50, hrMin: "8:20", via: [],
+        track: { source: "mesh", coordinates: [[-123, 48.5], [-123, 49]] } },
+    ];
+    const [transit] = passTransitsForDay({
+      ...baseInput,
+      route: { legs, totalNm: 60, totalHrMin: "10:00" },
+      passes: [pass("halfway through leg two", 48.75, -123)],
+    });
+
+    expect(transit?.alongRouteNm).toBeCloseTo(35, 1);
+    expect(transit?.etaMinutes).toBeCloseTo(830, 0);
+  });
+
   it("ignores passes well off the track", () => {
     const transits = passTransitsForDay({
       ...baseInput,

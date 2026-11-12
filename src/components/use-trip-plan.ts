@@ -19,6 +19,7 @@ import {
 } from "@/domain/trip";
 import type { DayConditions } from "@/application/day-conditions";
 import type { Coordinates } from "@/domain/location";
+import type { MeshGraph } from "@/domain/mesh-route";
 import type { SharedTripState } from "@/application/shareable-trip-url";
 
 /**
@@ -111,7 +112,8 @@ const initialSharedLocks = (
 
 export const useTripPlan = (
   composition: Composition,
-  initialState: SharedTripState | null = null
+  initialState: SharedTripState | null = null,
+  mesh: MeshGraph | null = null
 ): TripPlan => {
   const [days, setDaysState] = useState(initialState?.days ?? 1);
   const [minHours, setMinHoursState] = useState(
@@ -271,8 +273,8 @@ export const useTripPlan = (
   );
 
   const tripDays = useMemo(
-    () => (tripRequest === null ? [] : composition.planTrip(tripRequest)),
-    [composition, tripRequest]
+    () => (tripRequest === null ? [] : composition.planTrip(tripRequest, mesh)),
+    [composition, tripRequest, mesh]
   );
 
   const scheduleRequest = useMemo(
@@ -377,7 +379,9 @@ export const useTripPlan = (
   const stopSlugs = useMemo(() => {
     if (startSlug === null) return [];
     const stops = [startSlug];
-    for (const day of tripDays) if (day.toSlug !== null) stops.push(day.toSlug);
+    for (const day of tripDays) {
+      if (day.route !== null && day.toSlug !== null) stops.push(day.toSlug);
+    }
     return stops;
   }, [startSlug, tripDays]);
 

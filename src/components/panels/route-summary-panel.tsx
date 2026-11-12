@@ -155,6 +155,11 @@ export function RouteSummaryPanel({
                     {leg.nm.toFixed(1)} nm · {nmToHrMin(leg.nm, speedKnots)}
                     {leg.via.length > 0 ? ` · via ${leg.via.join(", ")}` : ""}
                   </div>
+                  {leg.track?.source === "approximate" ? (
+                    <p className={css({ fontSize: "xs", color: "amber.11" })}>
+                      Approximate track. Dashed lines may cross land. Pass timing is approximate.
+                    </p>
+                  ) : null}
                   <LegObstructions
                     obstructions={obstructionsFor(leg.obstructionIds ?? [])}
                     mastHeightFeet={mastHeightFeet}
@@ -167,6 +172,20 @@ export function RouteSummaryPanel({
           );
         })}
       </ol>
+
+      <p className={css({ fontSize: "xs", color: "fg.muted" })}>
+        <a
+          href="https://nvs.nanoos.org/Boaters"
+          target="_blank"
+          rel="noopener noreferrer"
+          className={css({ color: "colorPalette.11", textDecoration: "underline" })}
+        >
+          Regional surface-current forecast on NANOOS Boaters (opens in a new tab)
+        </a>
+        <br />
+        In Layers, choose Forecast Arrows → Currents (Surface) and check the map time.
+        If no overlay appears, use Select Closest Data Point and check its timestamp.
+      </p>
     </div>
   );
 }

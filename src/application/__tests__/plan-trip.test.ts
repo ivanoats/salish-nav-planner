@@ -126,6 +126,23 @@ describe("planTrip", () => {
     expect(days[1]).toMatchObject({ fromSlug: "b", toSlug: "d", source: "manual" });
   });
 
+  it("keeps an unreachable pin visible and stops the trip at the last reachable port", () => {
+    const days = planTrip({
+      ...base,
+      graph: buildRouteGraph([...edges, edge("isolated", "island", 30)]),
+      firstDestinationSlug: "b",
+      days: 4,
+      endSlug: "a",
+      overrides: new Map([[2, "isolated"]]),
+    });
+
+    expect(days[1]).toMatchObject({ fromSlug: "b", toSlug: "isolated", source: "manual", route: null });
+    expect(days.slice(2).map(({ fromSlug, toSlug, route }) => ({ fromSlug, toSlug, route }))).toEqual([
+      { fromSlug: "b", toSlug: null, route: null },
+      { fromSlug: "b", toSlug: null, route: null },
+    ]);
+  });
+
   it("emits empty days once nothing is reachable in range", () => {
     const days = planTrip({
       ...base,

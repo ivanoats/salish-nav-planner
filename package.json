@@ -19,6 +19,8 @@
     "test": "vitest run",
     "test:coverage": "vitest run --coverage",
     "test:watch": "vitest",
+    "test:e2e": "playwright test",
+    "test:e2e:install": "playwright install --with-deps chromium",
     "scrape": "tsx scripts/scrape-nwcruising.ts",
     "build:passes": "tsx scripts/build-passes.ts",
     "mesh:coastline": "node scripts/mesh/fetch-coastline.mjs && node scripts/mesh/fetch-inland-water.mjs",
@@ -36,6 +38,7 @@
   "devDependencies": {
     "@pandacss/dev": "^1.12.0",
     "@park-ui/panda-preset": "^0.43.1",
+    "@playwright/test": "~1.64.0",
     "@testing-library/jest-dom": "^7.0.1",
     "@testing-library/react": "^16.3.2",
     "@types/jsdom": "^30.0.0",

@@ -61,6 +61,9 @@ Routing data is scraped from [nwcruising.net](https://www.nwcruising.net)'s
 "via" passage notes to other locations. See [Data](#data) below for how
 that's licensed and why the scraped output isn't committed to this repo.
 
+See the [planner roadmap](docs/roadmap.md) for upcoming work and the
+[architecture decision log](docs/adr/README.md) for design decisions.
+
 ## Stack
 
 - **Next.js** App Router + React + TypeScript strict
@@ -95,8 +98,8 @@ npm run dev      # http://localhost:3000
 ```
 
 Run `npm run scrape` before `npm run dev` or `npm run build` to populate the
-planner. Without the generated files, the app still builds but has no routes
-(see [Data](#data)).
+planner. The app requires route data by default. CI can opt into an
+empty dataset for its build and supplies fixture data at test time.
 
 ## Deployment
 
@@ -107,10 +110,9 @@ OpenNext adapter.
 ### Getting route data into a deploy
 
 `edges.json` and `locations.geojson` are gitignored, so a Git-based build
-checks out a repo with no routes in it. The home page is prerendered and
-reads them, so without something in place the site deploys looking
-perfectly functional with an **empty destination picker** — which is
-exactly what happened once.
+checks out a repo with no routes in it. The home page reads route data
+and the shared trip URL at request time. The build fetches the data
+before compiling the app so the deployment can serve routes.
 
 `npm run build` therefore runs `npm run dataset` first
 ([`scripts/fetch-dataset.mjs`](scripts/fetch-dataset.mjs)), which pulls both
@@ -182,6 +184,7 @@ npm run typecheck   # panda codegen + tsc --noEmit
 npm run test         # vitest run
 npm run test:coverage # vitest run --coverage
 npm run test:watch  # vitest watch mode
+npm run test:e2e     # playwright, against a production build (see below)
 npm run lint         # eslint
 npm run scrape       # re-run the nwcruising.net crawler
 npm run dataset      # fetch hosted route data (needs the R2_* vars)
@@ -189,6 +192,28 @@ npm run build:passes # rebuild public/data/passes.json from NOAA + CHS
 npm run mesh:coastline # cache the OSM shoreline the mesh is traced from
 npm run mesh         # rebuild public/data/salish-mesh.json
 ```
+
+### End-to-end tests
+
+`npm run test:e2e` builds the app, starts it on port 3100 and runs the
+Playwright specs in `e2e/` against it (first time:
+`npm run test:e2e:install`). Two runtime switches keep it
+self-contained:
+
+- `SCRAPED_DATA_DIR=e2e/fixtures/dataset` reads `edges.json` and
+  `locations.geojson` from a small synthetic dataset: seven real
+  harbours, with distances worked out from their positions rather than
+  taken from the scrape. The one exception is set by hand: Port Ludlow
+  to Port Townsend is 13 nm through the Port Townsend Canal or 20 nm
+  the long way, so the mast-height tests have a fixed span to route
+  around. A local scrape in `public/data/` is never read or
+  overwritten.
+- `SYNTHETIC_CONDITIONS=1` answers `/api/wind` and `/api/currents` from
+  deterministic offline providers instead of Open-Meteo, NOAA and CHS.
+
+Basemap tiles are stubbed in the browser, so a run makes no requests to
+OpenStreetMap. If a server is already up on port 3100 locally, the suite
+reuses it.
 
 ## Weather and tides
 
@@ -224,6 +249,13 @@ where you fall between two table rows.
 Currents are astronomical and predictable years ahead; wind is not.
 Anything past the forecast horizon gets no wind at all, and both the
 planner and the UI say so rather than assuming calm.
+
+Each plotted route also links to the regional surface-current forecast
+in [NANOOS Boaters](https://nvs.nanoos.org/Boaters). Open **Layers → Forecast
+Arrows → Currents (Surface)** and check the map time. If no overlay appears,
+use **Select Closest Data Point** and check its timestamp. See
+[ADR 0003](docs/adr/0003-nanoos-surface-current-context.md) for the source
+assessment and how it fits with pass timing.
 
 ## Bridges and air draft
 
@@ -278,19 +310,13 @@ coordinates. Where the site doesn't have a direct point-to-point entry,
 `src/application/route-graph.ts` finds a path through intermediate
 hub locations (Dijkstra by nautical miles).
 
-There's no real polyline data — nwcruising.net itself only gives
-point-to-point distance/time, not a routed track. The map draws a
-straight line between each leg's endpoints, bent through any `via`
-passage name that resolves against `public/data/waypoints.json` (a
-small hand-curated set of well-known straits/passages with no own
-nwcruising.net page — Deception Pass, Admiralty Inlet, Colvos Passage,
-etc). This is an approximation for trip planning, not a chartplotter
-route. For the options considered, including an evaluation of
-`searoute-py`, see `docs/adr/0001-water-route-geometry-options.md`;
-`public/data/salish-mesh.json` (below) is the water network the map now
-draws from: `src/domain/mesh-route.ts` walks it between each leg's
-endpoints, falling back to the straight line for any leg the mesh cannot
-serve. The `via`-bending path above is that fallback.
+The distance tables give point-to-point mileage and named passages. The
+planner resolves each leg to a track from `public/data/salish-mesh.json`
+when the mesh path agrees with its known spans and passages. The map and
+pass timing use that same track. A leg uses the curated waypoint line
+while the mesh loads or if it cannot serve the leg consistently. The
+map shows those legs as dashed, and the route summary labels them
+approximate. See [ADR 0004](docs/adr/0004-consistent-route-tracks.md).
 
 **Licensing**: robots.txt permits crawling `nm_folders/`, `ca-nm_folders/`,
 and `routes*/`, but no redistribution permission has been sought from

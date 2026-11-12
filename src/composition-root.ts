@@ -6,6 +6,7 @@ import {
   type DayPassTransits,
 } from "@/application/day-conditions";
 import { candidatesForDay, planTrip, type PlanTripInput } from "@/application/plan-trip";
+import { resolveRouteTrack } from "@/application/resolve-route-track";
 import {
   buildRouteGraph,
   findRoute,
@@ -15,6 +16,7 @@ import {
 import type { LocationRepository } from "@/application/ports/location-repository";
 import type { IsoDate } from "@/domain/calendar";
 import type { Location, Waypoint } from "@/domain/location";
+import type { MeshGraph } from "@/domain/mesh-route";
 import type { Obstruction } from "@/domain/obstruction";
 import type { TidalPass } from "@/domain/pass";
 import type { PlannedRoute, RouteEdge } from "@/domain/route";
@@ -42,7 +44,7 @@ export interface Composition {
   /** Bridges on a planned leg, resolved from the ids it carries. */
   obstructionsFor(ids: readonly string[]): Obstruction[];
   planRoute(fromSlug: string, toSlug: string): PlannedRoute | null;
-  planTrip(input: TripRequest): TripDay[];
+  planTrip(input: TripRequest, mesh?: MeshGraph | null): TripDay[];
   candidatesForDay(input: TripRequest, dayNumber: number): DestinationCandidate[];
   /** Which passes a plan crosses — ask this before fetching predictions. */
   passTransits(request: TripScheduleRequest): DayPassTransits[];
@@ -109,7 +111,12 @@ export const createComposition = ({
         .map((id) => graph.obstructionsById.get(id))
         .filter((o): o is Obstruction => o !== undefined),
     planRoute: (fromSlug, toSlug) => findRoute(graph, fromSlug, toSlug),
-    planTrip: (input) => planTrip({ ...input, graph }),
+    planTrip: (input, mesh = null) => planTrip({ ...input, graph }).map((day) => ({
+      ...day,
+      route: day.route === null
+        ? null
+        : resolveRouteTrack(day.route, locationsBySlug, waypoints, passes, obstructions, mesh),
+    })),
     candidatesForDay: (input, dayNumber) => candidatesForDay({ ...input, graph }, dayNumber),
     passTransits: (request) => passTransitsForTrip(scheduleInput(request)),
     dayConditions: (request, windField, currentsByPassId) =>
