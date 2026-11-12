@@ -2,9 +2,9 @@
 
 import { useEffect, useRef } from "react";
 import {
+  clearSharedTripParameters,
   encodeSharedTrip,
   SHARED_TRIP_VERSION,
-  SHARED_TRIP_QUERY_KEYS,
   type SharedTripState,
 } from "@/application/shareable-trip-url";
 import type { TripPlan } from "@/components/use-trip-plan";
@@ -51,7 +51,7 @@ export const canonicalSharedTripUrl = (
 
 const removeSharedTripParameters = (currentHref: string): string => {
   const url = new URL(currentHref);
-  for (const key of SHARED_TRIP_QUERY_KEYS) url.searchParams.delete(key);
+  clearSharedTripParameters(url.searchParams);
   return url.toString();
 };
 

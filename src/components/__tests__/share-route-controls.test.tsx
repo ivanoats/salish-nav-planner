@@ -1,4 +1,6 @@
 import { act, fireEvent, render, renderHook, screen, waitFor } from "@testing-library/react";
+import { hydrateRoot } from "react-dom/client";
+import { renderToString } from "react-dom/server";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { SharedTripState } from "@/application/shareable-trip-url";
 import {
@@ -53,9 +55,7 @@ describe("shared trip URL synchronization", () => {
 
     expect(url).toBe(
       "https://example.test/cruise?" +
-        "v=1&days=2&min-hours=3&max-hours=8&speed=6&start=home&first=first" +
-        "&date=2026-08-24&depart=08%3A00&mast=50&wind=1&round=0&end=-" +
-        "&stops=home%2Cfirst%2Cauto&pins=-"
+        "v=2&s=home.first.auto&d=2026-08-24&t=480&a=3&b=8&k=6&m=50&w=1"
     );
   });
 
@@ -68,7 +68,7 @@ describe("shared trip URL synchronization", () => {
     );
 
     expect(replaceState).toHaveBeenCalledTimes(1);
-    expect(window.location.search).toContain("v=1");
+    expect(window.location.search).toContain("v=2");
     expect(window.history.length).toBe(historyLength);
 
     rerender({ state: { ...sharedTrip } });
@@ -95,9 +95,41 @@ describe("shared trip URL synchronization", () => {
     expect(replaceState).toHaveBeenCalledTimes(1);
     expect(window.location.search).toBe("?campaign=summer");
   });
+
+  it("clears malformed compact fields and preserves unrelated query parameters", () => {
+    window.history.replaceState({}, "", "/?v=2&s=unknown&p=1&start=other&campaign=summer");
+
+    renderHook(() => useShareableTripUrl(null, true));
+
+    expect(window.location.search).toBe("?start=other&campaign=summer");
+  });
 });
 
 describe("ShareRouteControls", () => {
+  it("adds Share after hydration without replacing server-rendered controls", async () => {
+    const container = document.createElement("div");
+    container.innerHTML = renderToString(<ShareRouteControls state={sharedTrip} />);
+    const serverCopyButton = container.querySelector("button");
+    expect(serverCopyButton?.textContent).toBe("Copy link");
+    Object.defineProperty(navigator, "share", { configurable: true, value: vi.fn() });
+    const onRecoverableError = vi.fn();
+    let root: ReturnType<typeof hydrateRoot> | undefined;
+    try {
+      await act(async () => {
+        root = hydrateRoot(container, <ShareRouteControls state={sharedTrip} />, {
+          onRecoverableError,
+        });
+      });
+
+      expect(onRecoverableError).not.toHaveBeenCalled();
+      expect([...container.querySelectorAll("button")].map((button) => button.textContent))
+        .toEqual(["Share", "Copy link"]);
+      expect(container.querySelectorAll("button")[1]).toBe(serverCopyButton);
+    } finally {
+      await act(async () => root?.unmount());
+    }
+  });
+
   it("shows a visible alert when an incoming shared link is malformed", () => {
     render(
       <SharedTripWarning
@@ -123,6 +155,7 @@ describe("ShareRouteControls", () => {
       value: { writeText },
     });
     render(<ShareRouteControls state={sharedTrip} />);
+    expect(screen.queryByRole("button", { name: "Share" })).toBeNull();
 
     await act(async () => {
       fireEvent.click(screen.getByRole("button", { name: "Copy link" }));
@@ -130,7 +163,7 @@ describe("ShareRouteControls", () => {
     });
 
     expect(writeText).toHaveBeenCalledWith(
-      expect.stringContaining("?v=1&days=2")
+      canonicalSharedTripUrl(window.location.href, sharedTrip)
     );
     expect(screen.getByRole("status").textContent).toBe("Link copied.");
   });
@@ -165,9 +198,9 @@ describe("ShareRouteControls", () => {
     });
 
     expect(share).toHaveBeenCalledWith(
-      expect.objectContaining({ url: expect.stringContaining("?v=1&days=2") })
+      expect.objectContaining({ url: canonicalSharedTripUrl(window.location.href, sharedTrip) })
     );
-    expect(screen.getByRole("status").textContent).toBe("Route shared.");
+    expect(screen.getByRole("status").textContent).toBe("Share sheet opened.");
   });
 
   it("does not announce an error when the user cancels the share sheet", async () => {

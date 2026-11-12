@@ -1,4 +1,4 @@
-import { dayItems, expect, pickLocation, test } from "./fixtures";
+import { dayItems, expect, pickLocation, stubBasemapTiles, test } from "./fixtures";
 
 /** Today on the water, which is the date a fresh plan starts on. */
 const todayInSalishSea = () =>
@@ -6,6 +6,9 @@ const todayInSalishSea = () =>
 
 test("a copied link reopens the same plan", async ({ page, context, pageErrors }) => {
   await context.grantPermissions(["clipboard-read", "clipboard-write"]);
+  await page.addInitScript(() => {
+    Object.defineProperty(navigator, "share", { value: undefined });
+  });
   await page.goto("/");
   await pickLocation(page, "Start", "Anacortes");
   await pickLocation(page, "Destination", "Deer Harbor");
@@ -15,6 +18,7 @@ test("a copied link reopens the same plan", async ({ page, context, pageErrors }
   await expect(dayItems(page).first()).toContainText(/slack \d{2}:\d{2}/);
   const planned = await dayItems(page).first().innerText();
 
+  await expect(page.getByRole("button", { name: "Share", exact: true })).toHaveCount(0);
   await page.getByRole("button", { name: "Copy link" }).click();
   await expect(page.getByRole("status")).toHaveText("Link copied.");
   const link = await page.evaluate(() => navigator.clipboard.readText());
@@ -30,7 +34,18 @@ test("a copied link reopens the same plan", async ({ page, context, pageErrors }
   expect(pageErrors).toEqual([]);
 });
 
-test("a shared multi-day link plans without any input", async ({ page, pageErrors }) => {
+test("a legacy multi-day link hydrates and shares the same compact URL as Copy link", async ({
+  browser, context, page, pageErrors,
+}) => {
+  await context.grantPermissions(["clipboard-read", "clipboard-write"]);
+  await page.addInitScript(() => {
+    Object.defineProperty(navigator, "share", {
+      value: ({ url }: ShareData) => {
+        document.documentElement.dataset.sharedTripUrl = url;
+        return Promise.resolve();
+      },
+    });
+  });
   const query = new URLSearchParams({
     v: "1",
     days: "2",
@@ -59,7 +74,32 @@ test("a shared multi-day link plans without any input", async ({ page, pageError
   await expect(dayItems(page).nth(0)).toContainText("Anacortes → Bellingham");
   await expect(dayItems(page).nth(1)).toContainText("Bellingham → Anacortes");
 
+  await page.getByRole("button", { name: "Share", exact: true }).click();
+  await expect(page.getByRole("status")).toHaveText("Share sheet opened.");
+  const sharedUrl = await page.locator("html").getAttribute("data-shared-trip-url");
+  if (sharedUrl === null) throw new Error("Web Share did not receive a trip URL.");
+  const compactQuery = new URL(sharedUrl).searchParams;
+  expect(compactQuery.get("v")).toBe("2");
+  expect(compactQuery.get("d")).toBe(query.get("date"));
+
+  await page.getByRole("button", { name: "Copy link" }).click();
+  await expect(page.getByRole("status")).toHaveText("Link copied.");
+  expect(await page.evaluate(() => navigator.clipboard.readText())).toBe(sharedUrl);
   expect(pageErrors).toEqual([]);
+
+  const recipient = await browser.newContext();
+  try {
+    await stubBasemapTiles(recipient);
+    const reopened = await recipient.newPage();
+    await reopened.goto(sharedUrl);
+    await expect(reopened.getByRole("checkbox", { name: /Round trip/ })).toBeChecked();
+    await expect(dayItems(reopened)).toHaveCount(2);
+    await expect(dayItems(reopened).nth(0)).toContainText("Anacortes → Bellingham");
+    await expect(dayItems(reopened).nth(1)).toContainText("Bellingham → Anacortes");
+    await expect(reopened.getByText("Shared link problem")).toHaveCount(0);
+  } finally {
+    await recipient.close();
+  }
 });
 
 test("a broken link warns and falls back to an empty plan", async ({ page }) => {

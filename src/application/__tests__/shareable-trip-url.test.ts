@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+import { formatClock } from "@/domain/clock";
 import {
   decodeSharedTrip,
   encodeSharedTrip,
@@ -26,20 +27,84 @@ const sharedTrip: SharedTripState = {
   pinnedDays: [2],
 };
 
+// Freeze the original wire format as a compatibility and size baseline.
+const legacyQuery = (state: SharedTripState) => new URLSearchParams({
+  v: "1",
+  days: String(state.days),
+  "min-hours": String(state.minHours),
+  "max-hours": String(state.maxHours),
+  speed: String(state.speedKnots),
+  start: state.startSlug,
+  first: state.firstDestinationSlug,
+  date: state.startDate,
+  depart: formatClock(state.departureMinutes),
+  mast: String(state.mastHeightFeet),
+  wind: state.windAware ? "1" : "0",
+  round: state.roundTrip ? "1" : "0",
+  end: state.customEndSlug ?? "-",
+  stops: state.stopSlugs.join(","),
+  pins: state.pinnedDays.join(",") || "-",
+});
+
+const sizeFixtures = [
+  {
+    name: "one day",
+    stops: ["anacortes", "deer_harbor"],
+    pins: [],
+    end: null,
+    roundTrip: false,
+  },
+  {
+    name: "three days with a pin and custom end",
+    stops: ["anacortes", "deer_harbor", "port_townsend", "port_ludlow"],
+    pins: [2],
+    end: "port_ludlow",
+    roundTrip: false,
+  },
+  {
+    name: "seven-day round trip with pins",
+    stops: ["anacortes", "deer_harbor", "bellingham", "la_conner", "oak_harbor",
+      "port_townsend", "port_ludlow", "anacortes"],
+    pins: [2, 4, 6],
+    end: null,
+    roundTrip: true,
+  },
+] as const;
+
 describe("shareable trip URL codec", () => {
-  it("round-trips every planner setting in one stable readable order", () => {
+  it("round-trips every planner setting in a stable compact format", () => {
     const query = encodeSharedTrip(sharedTrip);
 
     expect(query.toString()).toBe(
-      "v=1&days=3&min-hours=3&max-hours=8&speed=6.5&start=home&first=first-stop" +
-        "&date=2026-08-24&depart=08%3A30&mast=50&wind=1&round=0&end=custom-end" +
-        "&stops=home%2Cfirst-stop%2Cpinned-stop%2Ccustom-end&pins=2"
+      "v=2&s=home.first-stop.pinned-stop.custom-end&d=2026-08-24&t=510" +
+        "&a=3&b=8&k=6.5&m=50&w=1&e=custom-end&p=2"
     );
     expect(decodeSharedTrip(query, knownSlugs)).toEqual({
       state: sharedTrip,
       issues: [],
       hasSharedTrip: true,
     });
+  });
+
+  it.each(sizeFixtures)("preserves $name with a query at least 40% shorter", (fixture) => {
+    const [startSlug, firstDestinationSlug] = fixture.stops;
+    const state: SharedTripState = {
+      ...sharedTrip,
+      days: fixture.stops.length - 1,
+      startSlug,
+      firstDestinationSlug,
+      roundTrip: fixture.roundTrip,
+      customEndSlug: fixture.end,
+      stopSlugs: fixture.stops,
+      pinnedDays: fixture.pins,
+    };
+    const locations = new Set<string>(fixture.stops);
+    const legacy = legacyQuery(state);
+    const compact = encodeSharedTrip(state);
+
+    expect(decodeSharedTrip(legacy, locations).state).toEqual(state);
+    expect(decodeSharedTrip(compact, locations).state).toEqual(state);
+    expect(compact.toString().length).toBeLessThanOrEqual(legacy.toString().length * 0.6);
   });
 
   it("distinguishes a normal URL from a malformed shared URL", () => {
@@ -63,7 +128,7 @@ describe("shareable trip URL codec", () => {
   });
 
   it("rejects duplicate parameters and inconsistent or duplicate stops", () => {
-    const duplicateParameter = encodeSharedTrip(sharedTrip);
+    const duplicateParameter = legacyQuery(sharedTrip);
     duplicateParameter.append("days", "3");
     expect(decodeSharedTrip(duplicateParameter, knownSlugs).issues).toEqual(
       expect.arrayContaining([
@@ -71,13 +136,41 @@ describe("shareable trip URL codec", () => {
       ])
     );
 
-    const inconsistentStops = encodeSharedTrip(sharedTrip);
+    const inconsistentStops = legacyQuery(sharedTrip);
     inconsistentStops.set("stops", "home,first-stop,first-stop,custom-end");
     expect(decodeSharedTrip(inconsistentStops, knownSlugs).issues).toEqual(
       expect.arrayContaining([
         expect.objectContaining({ code: "inconsistent-stops", parameter: "stops" }),
       ])
     );
+  });
+
+  it.each([
+    ["s", "home.first-stop.unknown.custom-end", "unknown-location"],
+    ["s", "home.first-stop.first-stop.custom-end", "inconsistent-stops"],
+    ["t", "1440", "invalid-value"],
+    ["d", "2026-02-30", "invalid-value"],
+    ["p", "3", "invalid-value"],
+  ])("rejects malformed compact field %s=%s", (field, value, code) => {
+    const query = encodeSharedTrip(sharedTrip);
+    query.set(field, value);
+    expect(decodeSharedTrip(query, knownSlugs)).toMatchObject({
+      state: null,
+      issues: expect.arrayContaining([expect.objectContaining({ code })]),
+    });
+  });
+
+  it("rejects missing fields and duplicate optional compact fields", () => {
+    const query = encodeSharedTrip(sharedTrip);
+    query.delete("d");
+    query.append("p", "2");
+    expect(decodeSharedTrip(query, knownSlugs)).toMatchObject({
+      state: null,
+      issues: expect.arrayContaining([
+        expect.objectContaining({ code: "missing-parameter", parameter: "d" }),
+        expect.objectContaining({ code: "duplicate-parameter", parameter: "p" }),
+      ]),
+    });
   });
 
   it("accepts the start only as the final repeated stop of a round trip", () => {

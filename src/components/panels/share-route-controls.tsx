@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useSyncExternalStore } from "react";
 import { css } from "styled-system/css";
 import {
   encodeSharedTrip,
@@ -17,6 +17,14 @@ type ActionStatus = {
   readonly result: "shared" | "copied" | "error";
   readonly encodedState: string;
 } | null;
+
+// The API's presence is stable for a document. Server and hydration renders
+// both start with Copy link and only the browser can add Share afterward.
+const subscribeToShareAvailability = () => () => {
+  // No listener is needed for this browser capability.
+};
+const getShareAvailability = () => typeof navigator.share === "function";
+const getServerShareAvailability = () => false;
 
 export function SharedTripWarning({
   issues,
@@ -73,6 +81,11 @@ const buttonStyle = css({
 
 export function ShareRouteControls({ state }: ShareRouteControlsProps) {
   const [status, setStatus] = useState<ActionStatus>(null);
+  const canNativeShare = useSyncExternalStore(
+    subscribeToShareAvailability,
+    getShareAvailability,
+    getServerShareAvailability
+  );
   const encodedState = encodeSharedTrip(state).toString();
   const currentResult = status?.encodedState === encodedState ? status.result : null;
 
@@ -99,8 +112,6 @@ export function ShareRouteControls({ state }: ShareRouteControlsProps) {
       setStatus({ result: "error", encodedState });
     }
   };
-
-  const canNativeShare = typeof navigator !== "undefined" && typeof navigator.share === "function";
 
   return (
     <div
@@ -153,7 +164,7 @@ export function ShareRouteControls({ state }: ShareRouteControlsProps) {
         })}
       >
         {currentResult === "shared"
-          ? "Route shared."
+          ? "Share sheet opened."
           : currentResult === "copied"
             ? "Link copied."
             : currentResult === "error"
