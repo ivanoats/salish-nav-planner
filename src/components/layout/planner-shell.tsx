@@ -66,20 +66,23 @@ export function PlannerShell({
 
   const hasRoutes = trip.tripDays.some((day) => day.route !== null);
   useEffect(() => {
-    if (!hasRoutes || mesh !== null) return undefined;
-    const controller = new AbortController();
+    let cancelLoad: (() => void) | undefined;
+    if (hasRoutes && mesh === null) {
+      const controller = new AbortController();
 
-    const load = async () => {
-      const response = await fetch("/data/salish-mesh.json", { signal: controller.signal });
-      if (!response.ok) throw new Error(`HTTP ${response.status}`);
-      const collection: MeshFeatureCollection = await response.json();
-      if (!controller.signal.aborted) setMesh(buildMeshGraph(collection));
-    };
+      const load = async () => {
+        const response = await fetch("/data/salish-mesh.json", { signal: controller.signal });
+        if (!response.ok) throw new Error(`HTTP ${response.status}`);
+        const collection: MeshFeatureCollection = await response.json();
+        if (!controller.signal.aborted) setMesh(buildMeshGraph(collection));
+      };
 
-    load().catch((error: unknown) => {
-      if (!controller.signal.aborted) console.warn("[planner] Navigation mesh unavailable.", error);
-    });
-    return () => controller.abort();
+      load().catch((error: unknown) => {
+        if (!controller.signal.aborted) console.warn("[planner] Navigation mesh unavailable.", error);
+      });
+      cancelLoad = () => controller.abort();
+    }
+    return cancelLoad;
   }, [hasRoutes, mesh]);
 
   const locationsBySlug = useMemo(
