@@ -149,7 +149,7 @@ export function DayItinerary({
                       ? `${nm.toFixed(1)} nm · ${nmToHrMin(nm, speedKnots)}`
                       : "no route"}
                     {outOfRange ? " · outside day range" : ""}
-                    {day.source === "endpoint" ? " · trip ends here" : ""}
+                    {day.source === "endpoint" && day.route !== null ? " · trip ends here" : ""}
                     {isPinned(day.dayNumber) ? " · pinned" : ""}
                   </div>
                 </div>

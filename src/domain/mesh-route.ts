@@ -1,6 +1,5 @@
 import { haversineNm } from "./geo";
-import type { Coordinates, Location } from "./location";
-import type { PlannedRoute } from "./route";
+import type { Coordinates } from "./location";
 import type { LonLat } from "./route-line";
 
 /**
@@ -214,43 +213,4 @@ export const meshPathCoordinates = (
       return [node.at.lon, node.at.lat] as LonLat;
     }) ?? null
   );
-};
-
-/**
- * A whole planned route as one polyline, each leg walked over the mesh.
- *
- * Any leg the mesh cannot serve falls back to its own straight line, so
- * one unreachable harbour costs that leg's shape rather than the trip's.
- * `onFallback` is how the caller finds out; a line that quietly stops
- * following water is the failure this module exists to prevent.
- */
-export const buildMeshRouteLineCoordinates = (
-  route: PlannedRoute,
-  locationsBySlug: ReadonlyMap<string, Location>,
-  graph: MeshGraph,
-  onFallback?: (leg: { from: string; to: string }) => void
-): LonLat[] => {
-  const points: LonLat[] = [];
-  const push = (point: LonLat) => {
-    const last = points.at(-1);
-    if (last?.[0] === point[0] && last[1] === point[1]) return;
-    points.push(point);
-  };
-
-  for (const leg of route.legs) {
-    const from = locationsBySlug.get(leg.from);
-    const to = locationsBySlug.get(leg.to);
-    if (from === undefined || to === undefined) continue;
-
-    const path = meshPathCoordinates(graph, from, to);
-    if (path === null) {
-      onFallback?.({ from: leg.from, to: leg.to });
-      push([from.lon, from.lat]);
-      push([to.lon, to.lat]);
-      continue;
-    }
-    for (const point of path) push(point);
-  }
-
-  return points;
 };

@@ -155,6 +155,11 @@ export function RouteSummaryPanel({
                     {leg.nm.toFixed(1)} nm · {nmToHrMin(leg.nm, speedKnots)}
                     {leg.via.length > 0 ? ` · via ${leg.via.join(", ")}` : ""}
                   </div>
+                  {leg.track?.source === "approximate" ? (
+                    <p className={css({ fontSize: "xs", color: "amber.11" })}>
+                      Approximate track. Dashed lines may cross land. Pass timing is approximate.
+                    </p>
+                  ) : null}
                   <LegObstructions
                     obstructions={obstructionsFor(leg.obstructionIds ?? [])}
                     mastHeightFeet={mastHeightFeet}

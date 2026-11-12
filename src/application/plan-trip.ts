@@ -185,9 +185,9 @@ export const planTrip = ({
     const route = toSlug === null ? null : findRoute(graph, current, toSlug, mastHeightFeet);
     result.push({ dayNumber, fromSlug: current, toSlug, source, route });
 
-    if (toSlug === null) {
-      // No destination for this day, so later days have no origin to
-      // depart from — emit them as empty rather than resuming the chain.
+    if (route === null || toSlug === null) {
+      // An unplotted day leaves the boat at its last reachable stop.
+      // Keep this day's destination visible and leave later days empty.
       for (let rest = dayNumber + 1; rest <= days; rest++) {
         result.push({
           dayNumber: rest,
@@ -220,6 +220,7 @@ export const candidatesForDay = (
   const day = tripDays.find((d) => d.dayNumber === dayNumber);
   if (day === undefined || dayNumber === 1) return [];
   if (day.source === "endpoint") return [];
+  if (tripDays.slice(0, dayNumber - 1).some((earlier) => earlier.route === null)) return [];
 
   const visited = new Set<string>([input.startSlug]);
   for (const earlier of tripDays) {

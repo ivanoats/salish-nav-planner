@@ -69,16 +69,24 @@ test("draws the route over the navigation mesh", async ({ page, pageErrors }) =>
   await pickLocation(page, "Destination", "Deer Harbor");
   expect((await mesh).ok()).toBe(true);
 
-  // A straight line between two stops is two points; one walked through
-  // the mesh bends around the islands in between. The straight line is
-  // drawn first, while the mesh is still parsing, so the poll waits past it.
+  // Wait for the mesh track to replace the approximate line.
   await expect
     .poll(async () => {
       const days = await drawnRoute(page);
-      return days.length === 1 && days[0]?.day === 1 ? days[0].points : 0;
+      return days.length === 1 && days[0]?.day === 1 && !days[0].approximate ? days[0].points : 0;
     })
     .toBeGreaterThan(2);
 
   expect(warnings.filter((text) => text.includes("[map]"))).toEqual([]);
   expect(pageErrors).toEqual([]);
+});
+
+test("labels the plotted track approximate when the mesh is unavailable", async ({ page }) => {
+  await page.route("**/data/salish-mesh.json", (route) => route.fulfill({ status: 503 }));
+  await page.goto("/");
+  await pickLocation(page, "Start", "Anacortes");
+  await pickLocation(page, "Destination", "Deer Harbor");
+
+  await expect(page.getByText(/approximate track.*may cross land/i)).toBeVisible();
+  await expect.poll(() => drawnRoute(page)).toEqual([{ day: 1, points: 2, approximate: true }]);
 });

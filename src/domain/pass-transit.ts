@@ -1,5 +1,5 @@
 import { bearingDegrees, polylineLengthNm, projectOntoPolyline } from "./geo";
-import { buildRouteLineCoordinates } from "./route-line";
+import { buildDisplayedRouteLineCoordinates, type LonLat } from "./route-line";
 import { normalizeName } from "./slug";
 import type { Coordinates, Location, Waypoint } from "./location";
 import type { TidalPass } from "./pass";
@@ -32,9 +32,8 @@ export interface PassTransit {
 
 /**
  * How close the track has to run before an unnamed pass counts as on the
- * way. The route line is drawn straight between stops and via-points, so
- * it only approximates the water actually covered — tight enough to
- * exclude the next channel over, loose enough to survive that slop.
+ * way. Proximity is a hint for an unnamed pass on either mesh or
+ * approximate geometry.
  */
 export const PASS_PROXIMITY_NM = 3;
 
@@ -55,18 +54,11 @@ const toCoordinates = (lonLat: readonly [number, number]): Coordinates => ({
   lat: lonLat[1],
 });
 
-/** Every via name on the route, normalized for comparison. */
-const namedPlacesOn = (route: PlannedRoute): ReadonlySet<string> => {
-  const names = new Set<string>();
-  for (const leg of route.legs) {
-    for (const via of leg.via) names.add(normalizeName(via));
-  }
-  return names;
+/** The route table can name a pass by an alias. */
+export const isNamedPass = (pass: TidalPass, via: readonly string[]): boolean => {
+  const names = [pass.name, ...(pass.aliases ?? [])].map(normalizeName);
+  return via.some((name) => names.includes(normalizeName(name)));
 };
-
-const isNamedOn = (pass: TidalPass, named: ReadonlySet<string>): boolean =>
-  named.has(normalizeName(pass.name)) ||
-  (pass.aliases ?? []).some((alias) => named.has(normalizeName(alias)));
 
 export interface PassTransitsInput {
   readonly route: PlannedRoute;
@@ -79,15 +71,8 @@ export interface PassTransitsInput {
 }
 
 /**
- * The tidal passes a day's route goes through, in the order they're met,
- * each with an estimated time of arrival.
- *
- * The ETA is what makes this useful rather than decorative — knowing
- * Deception Pass turns at 12:37 means nothing until you know you'll get
- * there at 11:20. Distance to each pass comes from projecting it onto the
- * drawn track, then rescaling so the track's total matches the route's
- * published mileage: the line is a rough polyline, but stretching it to
- * the real distance keeps the ETA honest at the scale that matters.
+ * Projects passes onto each displayed leg. Scale the leg's track to its
+ * published mileage so earlier legs contribute their full planned distance.
  */
 export const passTransitsForDay = ({
   route,
@@ -97,39 +82,48 @@ export const passTransitsForDay = ({
   departureMinutes,
   speedKnots,
 }: PassTransitsInput): PassTransit[] => {
-  if (route.legs.length === 0 || speedKnots <= 0) return [];
+  if (speedKnots <= 0) return [];
 
-  const polyline = buildRouteLineCoordinates(route, locationsBySlug, waypoints).map(toCoordinates);
-  if (polyline.length < 2) return [];
+  const transits = new Map<string, PassTransit>();
+  let completedNm = 0;
 
-  const drawnNm = polylineLengthNm(polyline);
-  const scale = drawnNm > 0 ? route.totalNm / drawnNm : 1;
-  const named = namedPlacesOn(route);
+  for (const leg of route.legs) {
+    const coordinates: readonly LonLat[] = leg.track?.coordinates ??
+      buildDisplayedRouteLineCoordinates(
+        { legs: [leg], totalNm: leg.nm, totalHrMin: leg.hrMin }, locationsBySlug, waypoints
+      );
+    const polyline = coordinates.map(toCoordinates);
+    const drawnNm = polylineLengthNm(polyline);
 
-  const transits: PassTransit[] = [];
+    for (const pass of passes) {
+      const projection = projectOntoPolyline(pass, polyline);
+      if (projection === null || drawnNm === 0) continue;
 
-  for (const pass of passes) {
-    const projection = projectOntoPolyline(pass, polyline);
-    if (projection === null) continue;
+      const named = isNamedPass(pass, leg.via) && projection.offsetNm <= NAMED_PASS_MAX_OFFSET_NM;
+      if (!named && projection.offsetNm > PASS_PROXIMITY_NM) continue;
 
-    const wasNamed = isNamedOn(pass, named) && projection.offsetNm <= NAMED_PASS_MAX_OFFSET_NM;
-    if (!wasNamed && projection.offsetNm > PASS_PROXIMITY_NM) continue;
+      const previous = transits.get(pass.id);
+      const detection = named ? "named" : "nearby";
+      if (previous?.detection === "named" && !named) continue;
+      if (previous?.detection === detection && previous.offRouteNm <= projection.offsetNm) continue;
 
-    const start = polyline[projection.segmentIndex];
-    const end = polyline[projection.segmentIndex + 1];
-    if (start === undefined || end === undefined) continue;
+      const start = polyline[projection.segmentIndex];
+      const end = polyline[projection.segmentIndex + 1];
+      if (start === undefined || end === undefined) continue;
 
-    const alongRouteNm = projection.alongNm * scale;
+      const alongRouteNm = completedNm + Math.min(1, projection.alongNm / drawnNm) * leg.nm;
+      transits.set(pass.id, {
+        pass,
+        detection,
+        alongRouteNm,
+        offRouteNm: projection.offsetNm,
+        courseDegrees: bearingDegrees(start, end),
+        etaMinutes: departureMinutes + (alongRouteNm / speedKnots) * 60,
+      });
+    }
 
-    transits.push({
-      pass,
-      detection: wasNamed ? "named" : "nearby",
-      alongRouteNm,
-      offRouteNm: projection.offsetNm,
-      courseDegrees: bearingDegrees(start, end),
-      etaMinutes: departureMinutes + (alongRouteNm / speedKnots) * 60,
-    });
+    completedNm += leg.nm;
   }
 
-  return transits.sort((a, b) => a.alongRouteNm - b.alongRouteNm);
+  return [...transits.values()].sort((a, b) => a.alongRouteNm - b.alongRouteNm);
 };

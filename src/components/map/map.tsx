@@ -15,14 +15,8 @@ import {
 import "maplibre-gl/dist/maplibre-gl.css";
 import { Protocol } from "pmtiles";
 import { useEffect, useRef, useState } from "react";
-import { buildDisplayedRouteLineCoordinates } from "@/domain/route-line";
-import {
-  buildMeshGraph,
-  buildMeshRouteLineCoordinates,
-  type MeshGraph,
-} from "@/domain/mesh-route";
-import type { Location, Waypoint } from "@/domain/location";
-import type { PlannedRoute } from "@/domain/route";
+import type { Location } from "@/domain/location";
+import type { TripDay } from "@/domain/trip";
 
 import {
   SALISH_SEA_CENTER,
@@ -43,11 +37,9 @@ import {
 
 interface MapProps {
   readonly locations: readonly Location[];
-  readonly waypoints: readonly Waypoint[];
   /** Every overnight stop in order, starting with the trip's origin. */
   readonly stopLocations: readonly Location[];
-  /** One route per planned day, in order. */
-  readonly routes: readonly PlannedRoute[];
+  readonly tripDays: readonly TripDay[];
   /** Whether to draw a dot for every location in the dataset. */
   readonly showAllLocations: boolean;
   /** Optional local-only chart overlay — see README for how to set this up. */
@@ -83,9 +75,8 @@ const emptyFeatureCollection = (): GeoJSON.FeatureCollection => ({
 
 export function MapView({
   locations,
-  waypoints,
   stopLocations,
-  routes,
+  tripDays,
   showAllLocations,
   chartPmtilesUrl,
 }: MapProps) {
@@ -94,34 +85,6 @@ export function MapView({
   const markersRef = useRef<Marker[]>([]);
   const locationPopupRef = useRef<Popup | null>(null);
   const [styleLoaded, setStyleLoaded] = useState(false);
-  const [meshGraph, setMeshGraph] = useState<MeshGraph | null>(null);
-
-  // The mesh is ~800 KB, so it is fetched rather than shipped in the page
-  // payload, and only once a trip exists to draw. Until it arrives the map
-  // draws the straight lines it always did; when it lands the route
-  // redraws over water.
-  const wantsMesh = routes.some((dayRoute) => dayRoute.legs.length > 0);
-  useEffect(() => {
-    if (!wantsMesh || meshGraph !== null) return undefined;
-    let cancelled = false;
-    const load = async () => {
-      const response = await fetch("/data/salish-mesh.json");
-      if (!response.ok) throw new Error(`HTTP ${response.status}`);
-      const mesh = await response.json();
-      if (!cancelled) setMeshGraph(buildMeshGraph(mesh));
-    };
-    load().catch((error: unknown) => {
-      // Not fatal: the straight-line path below still draws a route.
-      console.warn(
-        "[map] could not load the navigation mesh; route lines will be drawn " +
-          "straight between stops and may cross land.",
-        error
-      );
-    });
-    return () => {
-      cancelled = true;
-    };
-  }, [wantsMesh, meshGraph]);
 
   useEffect(() => {
     // `undefined` rather than a bare `return`, so this path and the cleanup
@@ -196,6 +159,7 @@ export function MapView({
         id: ROUTE_SOURCE_ID,
         type: "line",
         source: ROUTE_SOURCE_ID,
+        filter: ["==", ["get", "approximate"], false],
         layout: { "line-join": "round", "line-cap": "round" },
         paint: {
           // Alternate hue by day parity so consecutive legs stay
@@ -207,10 +171,15 @@ export function MapView({
             "#2563eb",
           ],
           "line-width": 3,
-          // Dash lengths are multiples of line-width, so keep the "on"
-          // segment >= ~1 or it renders as sub-pixel dots that vanish.
-          "line-dasharray": [2, 1.5],
         },
+      },
+      {
+        id: `${ROUTE_SOURCE_ID}-approximate`,
+        type: "line",
+        source: ROUTE_SOURCE_ID,
+        filter: ["==", ["get", "approximate"], true],
+        layout: { "line-join": "round", "line-cap": "round" },
+        paint: { "line-color": "#b45309", "line-width": 3, "line-dasharray": [2, 1.5] },
       }
     );
 
@@ -345,32 +314,21 @@ export function MapView({
     const source = map.getSource<GeoJSONSource>(ROUTE_SOURCE_ID);
     if (source === undefined) return;
 
-    const locationsBySlug = new Map(locations.map((l) => [l.slug, l] as const));
     const allCoordinates: [number, number][] = [];
     const features: GeoJSON.Feature<GeoJSON.LineString>[] = [];
 
-    routes.forEach((dayRoute, index) => {
-      if (dayRoute.legs.length === 0) return;
-      // Over the mesh where it can be, straight where it cannot — per leg,
-      // so one harbour the mesh does not reach costs that leg's shape
-      // rather than the day's.
-      const line =
-        meshGraph === null
-          ? buildDisplayedRouteLineCoordinates(dayRoute, locationsBySlug, waypoints)
-          : buildMeshRouteLineCoordinates(dayRoute, locationsBySlug, meshGraph, (leg) =>
-              console.warn(
-                `[map] no mesh route for ${leg.from} -> ${leg.to}; drawing it straight.`
-              )
-            );
-      const coordinates = line.map(([lon, lat]) => [lon, lat] as [number, number]);
-      if (coordinates.length === 0) return;
-      allCoordinates.push(...coordinates);
-      features.push({
-        type: "Feature",
-        properties: { day: index + 1 },
-        geometry: { type: "LineString", coordinates },
-      });
-    });
+    for (const day of tripDays) {
+      for (const leg of day.route?.legs ?? []) {
+        if (leg.track === undefined || leg.track.coordinates.length < 2) continue;
+        const coordinates = leg.track.coordinates.map(([lon, lat]) => [lon, lat] as [number, number]);
+        allCoordinates.push(...coordinates);
+        features.push({
+          type: "Feature",
+          properties: { day: day.dayNumber, approximate: leg.track.source === "approximate" },
+          geometry: { type: "LineString", coordinates },
+        });
+      }
+    }
 
     source.setData({ type: "FeatureCollection", features });
 
@@ -382,7 +340,7 @@ export function MapView({
       );
       map.fitBounds(bounds, { padding: FIT_BOUNDS_PADDING, maxZoom: FIT_BOUNDS_MAX_ZOOM, duration: FIT_BOUNDS_DURATION });
     }
-  }, [routes, locations, waypoints, styleLoaded, meshGraph]);
+  }, [tripDays, styleLoaded]);
 
   return <div ref={containerRef} style={{ width: "100%", height: "100%" }} />;
 }
