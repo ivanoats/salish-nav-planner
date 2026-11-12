@@ -9,33 +9,38 @@ const BLANK_TILE = Buffer.from(
 );
 
 interface PlannerFixtures {
-  readonly offlineTiles: undefined;
   /** Console errors and uncaught exceptions seen so far on `page`. */
   readonly pageErrors: string[];
 }
 
 /**
- * The automatic fixture keeps every test off the volunteer-run OpenStreetMap
- * tile server. `pageErrors` tracks anything the page reported as an error.
+ * Every test gets a page that never reaches OpenStreetMap — tiles are
+ * answered locally, which keeps runs off a volunteer-run tile server and
+ * independent of the network — and a running list of anything the page
+ * reported as an error.
  */
 export const test = base.extend<PlannerFixtures>({
-  offlineTiles: [
-    async ({ page }, provide) => {
-      await page.route("https://tile.openstreetmap.org/**", (route) =>
+  // Automatic, so a test that never reads the errors still gets the tile
+  // stub. Both live on the context rather than the page, so a second tab a
+  // test opens is stubbed and watched too.
+  pageErrors: [
+    async ({ context, page }, provide) => {
+      const errors: string[] = [];
+      const watch = (tab: Page) => {
+        tab.on("console", (message) => {
+          if (message.type() === "error") errors.push(message.text());
+        });
+        tab.on("pageerror", (error) => errors.push(error.message));
+      };
+      await context.route("https://tile.openstreetmap.org/**", (route) =>
         route.fulfill({ contentType: "image/png", body: BLANK_TILE })
       );
-      await provide(undefined);
+      watch(page);
+      context.on("page", watch);
+      await provide(errors);
     },
     { auto: true },
   ],
-  pageErrors: async ({ page }, provide) => {
-    const errors: string[] = [];
-    page.on("console", (message) => {
-      if (message.type() === "error") errors.push(message.text());
-    });
-    page.on("pageerror", (error) => errors.push(error.message));
-    await provide(errors);
-  },
 });
 
 /** Picks a location in one of the planner's comboboxes by typing part of its name. */
@@ -43,6 +48,10 @@ export const pickLocation = async (page: Page, field: string | RegExp, name: str
   await page.getByRole("combobox", { name: field }).fill(name.slice(0, 4));
   await page.getByRole("option", { name, exact: true }).click();
 };
+
+/** One entry per planned day in the itinerary, in order. */
+export const dayItems = (page: Page) =>
+  page.getByRole("listitem").filter({ hasText: /^Day \d+ ·/ });
 
 /** The planned-route features MapLibre is currently drawing. */
 export const drawnRoute = (page: Page) =>

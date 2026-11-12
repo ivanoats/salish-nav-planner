@@ -136,22 +136,6 @@
     "routeUrl": "e2e-fixture"
   },
   {
-    "from": "port_ludlow",
-    "to": "port_townsend",
-    "nm": 15.2,
-    "hrMin": "2:10",
-    "via": [],
-    "routeUrl": "e2e-fixture"
-  },
-  {
-    "from": "port_townsend",
-    "to": "port_ludlow",
-    "nm": 15.2,
-    "hrMin": "2:10",
-    "via": [],
-    "routeUrl": "e2e-fixture"
-  },
-  {
     "from": "deer_harbor",
     "to": "port_townsend",
     "nm": 41.8,
@@ -165,6 +149,46 @@
     "nm": 41.8,
     "hrMin": "5:58",
     "via": [],
+    "routeUrl": "e2e-fixture"
+  },
+  {
+    "from": "port_ludlow",
+    "to": "port_townsend",
+    "nm": 13,
+    "hrMin": "1:51",
+    "via": [
+      "Port Townsend Canal"
+    ],
+    "routeUrl": "e2e-fixture"
+  },
+  {
+    "from": "port_townsend",
+    "to": "port_ludlow",
+    "nm": 13,
+    "hrMin": "1:51",
+    "via": [
+      "Port Townsend Canal"
+    ],
+    "routeUrl": "e2e-fixture"
+  },
+  {
+    "from": "port_ludlow",
+    "to": "port_townsend",
+    "nm": 20,
+    "hrMin": "2:51",
+    "via": [
+      "Admiralty Inlet"
+    ],
+    "routeUrl": "e2e-fixture"
+  },
+  {
+    "from": "port_townsend",
+    "to": "port_ludlow",
+    "nm": 20,
+    "hrMin": "2:51",
+    "via": [
+      "Admiralty Inlet"
+    ],
     "routeUrl": "e2e-fixture"
   }
 ]
