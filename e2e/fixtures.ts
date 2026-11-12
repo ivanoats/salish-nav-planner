@@ -9,7 +9,7 @@ const BLANK_TILE = Buffer.from(
 );
 
 interface PlannerFixtures {
-  readonly offlineTiles: void;
+  readonly offlineTiles: undefined;
   /** Console errors and uncaught exceptions seen so far on `page`. */
   readonly pageErrors: string[];
 }
@@ -24,7 +24,7 @@ export const test = base.extend<PlannerFixtures>({
       await page.route("https://tile.openstreetmap.org/**", (route) =>
         route.fulfill({ contentType: "image/png", body: BLANK_TILE })
       );
-      await provide();
+      await provide(undefined);
     },
     { auto: true },
   ],

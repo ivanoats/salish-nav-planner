@@ -66,7 +66,7 @@ export function PlannerShell({
 
   const hasRoutes = trip.tripDays.some((day) => day.route !== null);
   useEffect(() => {
-    if (!hasRoutes || mesh !== null) return;
+    if (!hasRoutes || mesh !== null) return undefined;
     const controller = new AbortController();
 
     const load = async () => {

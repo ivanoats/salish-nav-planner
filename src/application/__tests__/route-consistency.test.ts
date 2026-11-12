@@ -28,8 +28,8 @@ const input = {
   overrides: new Map<number, string>(),
 };
 
-const a: LonLat = [-123, 48];
-const b: LonLat = [-123, 48.4];
+const departurePoint: LonLat = [-123, 48];
+const destinationPoint: LonLat = [-123, 48.4];
 const passPoint: LonLat = [-123.16, 48.1];
 const namedPass: TidalPass = {
   id: "narrows",
@@ -44,7 +44,7 @@ const namedPass: TidalPass = {
 
 describe("route geometry and planning agree", () => {
   const composition = createComposition({
-    locations: [harbour("a", a), harbour("b", b)],
+    locations: [harbour("a", departurePoint), harbour("b", destinationPoint)],
     edges: [edge("a", "b", 24, [namedPass.name])],
     waypoints: [namedPass],
     passes: [namedPass],
@@ -54,12 +54,15 @@ describe("route geometry and planning agree", () => {
 
   it("times a named pass on the mesh line shown for the same leg", () => {
     const approach: LonLat = [-123.16, 48.05];
-    const tripDays = composition.planTrip(input, mesh([a, approach, passPoint, b]));
+    const tripDays = composition.planTrip(
+      input,
+      mesh([departurePoint, approach, passPoint, destinationPoint])
+    );
     const [day] = tripDays;
 
     expect(day?.route?.legs[0]?.track).toEqual({
       source: "mesh",
-      coordinates: [a, approach, passPoint, b],
+      coordinates: [departurePoint, approach, passPoint, destinationPoint],
     });
     const [timing] = composition.passTransits({
       tripDays, startDate: "2026-11-11", departureMinutes: 480, speedKnots: 6,
@@ -70,18 +73,18 @@ describe("route geometry and planning agree", () => {
   });
 
   it("marks the waypoint fallback when the mesh misses a named pass", () => {
-    const [day] = composition.planTrip(input, mesh([a, b]));
+    const [day] = composition.planTrip(input, mesh([departurePoint, destinationPoint]));
     expect(day?.route?.legs[0]?.track).toEqual({
       source: "approximate",
-      coordinates: [a, passPoint, b],
+      coordinates: [departurePoint, passPoint, destinationPoint],
     });
   });
 
   it("keeps the waypoint track when the destination is outside the mesh", () => {
-    const [day] = composition.planTrip(input, mesh([a, passPoint]));
+    const [day] = composition.planTrip(input, mesh([departurePoint, passPoint]));
     expect(day?.route?.legs[0]?.track).toEqual({
       source: "approximate",
-      coordinates: [a, passPoint, b],
+      coordinates: [departurePoint, passPoint, destinationPoint],
     });
   });
 
@@ -109,7 +112,10 @@ describe("route geometry and planning agree", () => {
       obstructions: [],
     });
 
-    const [day] = planner.planTrip(input, mesh([start, ...corridor, end]));
+    const [day] = planner.planTrip(
+      { ...input, startSlug: "start", firstDestinationSlug: "end" },
+      mesh([start, ...corridor, end])
+    );
 
     expect(day?.route?.legs[0]?.track).toEqual({
       source: "mesh",
@@ -125,20 +131,28 @@ describe("route geometry and planning agree", () => {
       clearanceFeet: 50, opens: false,
     };
     const planner = createComposition({
-      locations: [harbour("a", a), harbour("b", b), harbour("detour", detour)],
+      locations: [
+        harbour("a", departurePoint),
+        harbour("b", destinationPoint),
+        harbour("detour", detour),
+      ],
       edges: [edge("a", "b", 24, [bridge.name]), edge("a", "detour", 24), edge("detour", "b", 12)],
       waypoints: [],
       passes: [],
       windZones: [],
       obstructions: [bridge],
     });
-    const water = mesh([a, bridgePoint, b], [bridgePoint, detour], [detour, b]);
+    const water = mesh(
+      [departurePoint, bridgePoint, destinationPoint],
+      [bridgePoint, detour],
+      [detour, destinationPoint]
+    );
     const [day] = planner.planTrip({ ...input, mastHeightFeet: 55 }, water);
 
     expect(day?.route?.totalNm).toBe(36);
     expect(day?.route?.legs.map((leg) => leg.track)).toEqual([
-      { source: "approximate", coordinates: [a, detour] },
-      { source: "mesh", coordinates: [detour, b] },
+      { source: "approximate", coordinates: [departurePoint, detour] },
+      { source: "mesh", coordinates: [detour, destinationPoint] },
     ]);
   });
 });
