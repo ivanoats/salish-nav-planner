@@ -17,7 +17,12 @@ const DATA_DIR = join(process.cwd(), "public", "data");
  */
 const scrapedDataDir = (): string => {
   const override = process.env.SCRAPED_DATA_DIR?.trim();
-  return override === undefined || override === "" ? DATA_DIR : join(process.cwd(), override);
+  if (override === undefined || override === "") return DATA_DIR;
+  // Ignored by Turbopack's file tracing: a path it can't resolve at build
+  // time makes it trace the whole project into the server output. The
+  // override only ever points at files that `next start` reads from the
+  // checkout, so nothing needs tracing.
+  return join(/* turbopackIgnore: true */ process.cwd(), override);
 };
 
 interface LocationFeature {
