@@ -115,7 +115,7 @@ describe("ShareRouteControls", () => {
     const onRecoverableError = vi.fn();
     let root: ReturnType<typeof hydrateRoot> | undefined;
     try {
-      await act(async () => {
+      await act(() => {
         root = hydrateRoot(container, <ShareRouteControls state={sharedTrip} />, {
           onRecoverableError,
         });
@@ -126,7 +126,7 @@ describe("ShareRouteControls", () => {
         .toEqual(["Share", "Copy link"]);
       expect(container.querySelectorAll("button")[1]).toBe(serverCopyButton);
     } finally {
-      await act(async () => root?.unmount());
+      await act(() => root?.unmount());
     }
   });
 
