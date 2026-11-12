@@ -13,8 +13,14 @@ interface ShareRouteControlsProps {
   readonly state: SharedTripState;
 }
 
+const actionMessages = {
+  shared: "Share sheet opened.",
+  copied: "Link copied.",
+  error: "Couldn’t complete that action. Copy the link from the address bar.",
+};
+
 type ActionStatus = {
-  readonly result: "shared" | "copied" | "error";
+  readonly result: keyof typeof actionMessages;
   readonly encodedState: string;
 } | null;
 
@@ -163,13 +169,7 @@ export function ShareRouteControls({ state }: ShareRouteControlsProps) {
           color: currentResult === "error" ? "fg.error" : "fg.muted",
         })}
       >
-        {currentResult === "shared"
-          ? "Share sheet opened."
-          : currentResult === "copied"
-            ? "Link copied."
-            : currentResult === "error"
-              ? "Couldn’t complete that action. Copy the link from the address bar."
-              : null}
+        {currentResult === null ? null : actionMessages[currentResult]}
       </p>
     </div>
   );
