@@ -19,8 +19,18 @@
     "slug": "sandy_hook",
     "name": "Sandy Hook, Cultus Bay",
     "region": "US",
-    "lat": 47.9557,
-    "lon": -122.3936,
-    "reason": "Source page reads 47° 35' N, 122° 30' W, which lands in mid-Sound off Kingston. Sandy Hook is on Cultus Bay at the south end of Whidbey Island; that position matches the tables (6 nm to Point No Point, 11 nm to Everett) where the published one does not."
+    "lat": 47.901,
+    "lon": -122.409,
+    "requireWaterCell": true,
+    "reason": "The source header is off Kingston, and the previous correction was inland on Whidbey Island (NOAA ENC US5SEAKL). Use a planning point in charted water offshore of the private Cultus Bay entrance (US5SEAJK), outside the marina channel and its tidal flats."
+  },
+  {
+    "slug": "port_townsend",
+    "name": "Port Townsend",
+    "region": "US",
+    "lat": 48.10645,
+    "lon": -122.771,
+    "requireWaterCell": true,
+    "reason": "The source point is inside Point Hudson Marina. The mesh cut across its south breakwater to reach it. Use an approach point just seaward of the breakwater in charted water (NOAA ENC US5SEAMG)."
   }
 ]
