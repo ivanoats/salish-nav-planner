@@ -169,6 +169,7 @@ interface LocationRecord {
   region: "US" | "CA";
   lon: number;
   lat: number;
+  requireWaterCell?: boolean;
 }
 
 const readJson = <T>(fileName: string): T =>
@@ -181,9 +182,7 @@ const loadLocations = (): LocationRecord[] => {
       properties: { slug: string; name: string; region: "US" | "CA" };
     }[];
   }>("locations.geojson");
-  const fixes = readJson<
-    { slug: string; name: string; region: "US" | "CA"; lat: number; lon: number }[]
-  >("location-fixes.json");
+  const fixes = readJson<LocationRecord[]>("location-fixes.json");
 
   const bySlug = new Map<string, LocationRecord>();
   for (const feature of geojson.features) {
@@ -195,16 +194,13 @@ const loadLocations = (): LocationRecord[] => {
       lat: feature.geometry.coordinates[1],
     });
   }
-  // Same corrections the app applies on load, for the same reason: the
-  // uncorrected headers put three harbours in the open Pacific.
+  // Keep mesh endpoints at the same corrected positions the app uses.
   for (const fix of fixes) {
     const existing = bySlug.get(fix.slug);
     bySlug.set(fix.slug, {
-      slug: fix.slug,
+      ...fix,
       name: existing?.name ?? fix.name,
       region: existing?.region ?? fix.region,
-      lon: fix.lon,
-      lat: fix.lat,
     });
   }
   return [...bySlug.values()];
@@ -773,10 +769,15 @@ const main = () => {
   const traceSpurs = () => {
     for (const location of locations) {
       const harbour = snapToWater(grid, location.lon, location.lat, {
-        maxCells: 90,
+        // Chart-reviewed approach points must lie in a wet cell. Searching
+        // farther could join the point to the network across a headland.
+        maxCells: location.requireWaterCell ? 0 : 90,
         wantClearance: 1,
       });
       if (harbour === null) {
+        if (location.requireWaterCell) {
+          throw new Error(`${location.slug}: chart-reviewed approach is outside the mesh's water cells`);
+        }
         warnings.push(`${location.slug}: no navigable water within 7 km of its published position`);
         continue;
       }

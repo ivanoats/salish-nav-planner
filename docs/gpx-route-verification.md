@@ -79,10 +79,8 @@ the direct detour chord in US5WA19M (edition 17/update 1). The detour's land
 intersection in US5SEAKL runs from roughly 47.94544° N, 122.35630° W to
 47.95570° N, 122.39360° W. NOAA cell US5WA17M (edition 22/update 0) shows the
 same crossing. This segment belongs to `spur-sandy_hook` and appears in
-multiple generated route edges. The smaller Port Townsend and Bellingham
-approach intersections still need inspection at chart scale to distinguish
-geometry defects from shoreline or marina data artifacts. The detour blocks
-release.
+multiple generated route edges. The screen also found smaller crossings near
+Port Townsend and Bellingham.
 
 Scraped data and geometry snapshot for the measured runs, recorded as SHA-256:
 
@@ -91,6 +89,36 @@ Scraped data and geometry snapshot for the measured runs, recorded as SHA-256:
 | `locations.geojson` | `e3fe00cc812e29db7097c61a40f55807b9c68b6abe7ded1c7db45b35bd92014e` |
 | `edges.json` | `ac5e5201ffb00597522fe67d634fcd86f66bef920f8de4a71af294150e86d0ed` |
 | `salish-mesh.json` | `1d59c74b76262f287017e7716cf63105ea7738cb1d2a54d3607f9592ab08e92c` |
+
+### Bridge detour recheck
+
+On 2026-11-16, the rebuilt mesh used charted offshore planning points at
+Cultus Bay and Point Hudson. The Sandy Hook harbour connection dropped from
+3,053 m to 32 m. The Port Townsend departure cleared Point Hudson's south
+breakwater. Both points must fall inside water cells when rebuilding the
+mesh. The points represent approaches to the harbours.
+
+The 60 ft case still routed Port Townsend → Sandy Hook → Port Ludlow,
+with 35.10 NM in the planner and 34.14 NM along the track (GDAL, UTM zone
+10N). Both legs used mesh geometry. NOAA ENC US5SEALG (edition 1/update 0)
+charts the canal bridge at 17.6 m (57.7 ft), below the 63 ft requirement.
+The detour avoided the bridge. The 50 ft control still chose the 12.90 NM
+canal route and used approximate geometry for its canal leg.
+
+GDAL 3.13.3 intersected the full 60 ft track with the NOAA ENC features. The
+11 detailed cells covered the entire line. The track intersected no land
+(`LNDARE`), shoreline construction (`SLCONS`), bridge, rock, wreck, or
+obstruction features. Depth and dredged areas covered the full track. The
+lowest area depth bound was 5.4 m at chart datum in US5SEAJH, above the
+7 ft benchmark. The direct endpoint chord still intersected charted land.
+The cells used for the detour were US5SEAJH (edition 1/update 2)
+and US5SEAJJ, US5SEAJK, US5SEAKH, US5SEAKI, US5SEAKJ, US5SEAKK, US5SEALH,
+US5SEALI, US5SEAMG, and US5SEAMH (edition 1/update 0).
+
+The same scraped dataset was used for the recheck. The rebuilt mesh SHA-256
+is `a4f417df22a355062883f4853e857b615d16fe80e9667d2cb24a5ed85ef8338b`.
+Production export stays disabled while the other route and importer checks
+are pending.
 
 [issue-53]: https://github.com/ivanoats/salish-nav-planner/issues/53
 [topografix-xsd]: https://www.topografix.com/GPX/1/1/gpx.xsd
