@@ -30,6 +30,7 @@ import {
   type Cell,
 } from "./mesh/router";
 import type { CorridorSpec, LonLat } from "./mesh/types";
+import { snapHarbourToWater } from "./mesh/harbour";
 import { PUGET_CORRIDORS } from "./mesh/skeleton-puget";
 import { SAN_JUAN_CORRIDORS } from "./mesh/skeleton-sanjuans";
 import { GEORGIA_CORRIDORS } from "./mesh/skeleton-georgia";
@@ -763,21 +764,14 @@ const main = () => {
 
   const spurs: BuiltSpur[] = [];
     const harbourCells = new Map<string, Cell>();
+  const regional = Boolean(process.env.MESH_REGION);
 
   log(`\ntracing ${locations.length} harbour spurs`);
   /** Traces one entrance spur per harbour, out to the nearest corridor. */
   const traceSpurs = () => {
     for (const location of locations) {
-      const harbour = snapToWater(grid, location.lon, location.lat, {
-        // Chart-reviewed approach points must lie in a wet cell. Searching
-        // farther could join the point to the network across a headland.
-        maxCells: location.requireWaterCell ? 0 : 90,
-        wantClearance: 1,
-      });
+      const harbour = snapHarbourToWater(grid, location, regional);
       if (harbour === null) {
-        if (location.requireWaterCell) {
-          throw new Error(`${location.slug}: chart-reviewed approach is outside the mesh's water cells`);
-        }
         warnings.push(`${location.slug}: no navigable water within 7 km of its published position`);
         continue;
       }
