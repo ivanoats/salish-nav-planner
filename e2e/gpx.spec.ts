@@ -3,8 +3,7 @@ import type { GeoJSONSource, Map as MapLibreMap } from "maplibre-gl";
 import { dayItems, expect, pickLocation, test } from "./fixtures";
 
 test("downloads the current multi-day itinerary and every displayed mesh vertex", async ({ page }) => {
-  let finishMeshRequest = () => {};
-  const meshDelay = new Promise<void>((resolve) => { finishMeshRequest = resolve; });
+  const { promise: meshDelay, resolve: finishMeshRequest } = Promise.withResolvers<void>();
   await page.route("**/data/salish-mesh.json", async (route) => {
     await meshDelay;
     await route.continue();

@@ -6,12 +6,22 @@ const entities: Readonly<Record<string, string>> = {
   ">": "&gt;",
   '"': "&quot;",
   "'": "&apos;",
+  "\r": "&#13;",
 };
 
-const xmlText = (text: string): string => text
-  // XML 1.0 permits these Unicode ranges and whitespace characters.
-  .replace(/[^\u0009\u000A\u000D\u0020-\uD7FF\uE000-\uFFFD\u{10000}-\u{10FFFF}]/gu, "\uFFFD")
-  .replace(/[&<>"']/gu, (character) => entities[character] ?? character);
+function xmlText(text: string): string {
+  let escaped = "";
+  for (const character of text) {
+    const codePoint = character.codePointAt(0) ?? 0;
+    // XML 1.0 Char production. Iteration preserves supplementary characters.
+    const valid = codePoint === 0x09 || codePoint === 0x0A || codePoint === 0x0D ||
+      (codePoint >= 0x20 && codePoint <= 0xD7FF) ||
+      (codePoint >= 0xE000 && codePoint <= 0xFFFD) ||
+      (codePoint >= 0x10000 && codePoint <= 0x10FFFF);
+    escaped += valid ? (entities[character] ?? character) : "\uFFFD";
+  }
+  return escaped;
+}
 
 // GPX uses xsd:decimal, which does not permit exponent notation.
 const decimal = new Intl.NumberFormat("en-US", {

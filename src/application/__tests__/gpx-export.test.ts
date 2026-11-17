@@ -7,10 +7,10 @@ import type { LonLat } from "@/domain/route-line";
 import type { RouteLeg } from "@/domain/route";
 import type { TripDay } from "@/domain/trip";
 
-const a: LonLat = [-122.601234567, 48.51];
+const departure: LonLat = [-122.601234567, 48.51];
 const bend: LonLat = [-122.7, 48.57];
-const b: LonLat = [-122.8, 48.6];
-const c: LonLat = [-122.9, 48.7];
+const secondStop: LonLat = [-122.8, 48.6];
+const thirdStop: LonLat = [-122.9, 48.7];
 const places = new Map([
   ["a", { name: "Éscale & <North> \"A\" '港' 🛟" }],
   ["b", { name: "Second stop" }],
@@ -26,21 +26,25 @@ const day = (dayNumber: number, fromSlug: string, toSlug: string, ...legs: Route
   route: { legs, totalNm: 5 * legs.length, totalHrMin: "0:50" },
 });
 
-const first = day(1, "a", "c", leg("a", "b", [a, bend, bend, b]), leg("b", "c", [b, c]));
-const second = day(2, "c", "a", leg("c", "b", [c, b]), leg("b", "a", [b, bend, a]));
+const first = day(1, "a", "c", leg("a", "b", [departure, bend, bend, secondStop]), leg("b", "c", [secondStop, thirdStop]));
+const second = day(2, "c", "a", leg("c", "b", [thirdStop, secondStop]), leg("b", "a", [secondStop, bend, departure]));
 const namespace = "http://www.topografix.com/GPX/1/1";
 const schema = join(import.meta.dirname, "fixtures/gpx-1.1.xsd");
 
-function parseValidatedExport(days: readonly TripDay[]) {
-  const result = buildGpxExport(days, places, "ready");
-  if (result.status !== "ready") throw new Error(result.reason);
-  const bytes = Buffer.from(serializeGpx(result.routes), "utf8");
+function parseValidatedGpx(xml: string) {
+  const bytes = Buffer.from(xml, "utf8");
   execFileSync("xmllint", ["--noout", "--nonet", "--schema", schema, "-"], {
     input: bytes, stdio: ["pipe", "pipe", "pipe"],
   });
   return new DOMParser().parseFromString(
     new TextDecoder("utf-8", { fatal: true }).decode(bytes), "application/xml"
   );
+}
+
+function parseValidatedExport(days: readonly TripDay[]) {
+  const result = buildGpxExport(days, places, "ready");
+  if (result.status !== "ready") throw new Error(result.reason);
+  return parseValidatedGpx(serializeGpx(result.routes));
 }
 
 describe("GPX export", () => {
@@ -55,12 +59,22 @@ describe("GPX export", () => {
     const points = routes.map((route) => Array.from(route.getElementsByTagNameNS(namespace, "rtept")));
     expect(points.map((dayPoints) => dayPoints.map((point) => [
       Number(point.getAttribute("lon")), Number(point.getAttribute("lat")),
-    ]))).toEqual([[a, bend, bend, b, c], [c, b, bend, a]]);
+    ]))).toEqual([[departure, bend, bend, secondStop, thirdStop], [thirdStop, secondStop, bend, departure]]);
     expect(points.map((dayPoints) => dayPoints.map((point) => point.textContent))).toEqual([
       [places.get("a")?.name, "", "", "Second stop", "Third stop"],
       ["Third stop", "Second stop", "", places.get("a")?.name],
     ]);
     expect(doc.getElementsByTagNameNS(namespace, "desc")[0]?.textContent).toMatch(/passage-planning aid/i);
+  });
+
+  it("preserves XML whitespace and supplementary characters and replaces invalid code points", () => {
+    const name = "Harbor\t\n\r🛟\u0000\uD800\uFFFE";
+    const doc = parseValidatedGpx(serializeGpx([{
+      name,
+      points: [{ coordinates: departure, name }, { coordinates: secondStop }],
+    }]));
+    const names = Array.from(doc.getElementsByTagNameNS(namespace, "name"), (node) => node.textContent);
+    expect(names).toEqual(Array(2).fill("Harbor\t\n\r🛟\uFFFD\uFFFD\uFFFD"));
   });
 
   it("writes bounded WGS84 coordinates as decimals even when JavaScript uses an exponent", () => {
@@ -93,30 +107,30 @@ describe("GPX export", () => {
   });
 
   it.each([
-    ["approximate", { source: "approximate", coordinates: [a, b] }, "Route geometry is approximate."],
+    ["approximate", { source: "approximate", coordinates: [departure, secondStop] }, "Route geometry is approximate."],
     ["missing", undefined, "Route geometry is missing."],
-    ["too few points", { source: "mesh", coordinates: [a] }, "Route geometry is invalid."],
-    ["one distinct point", { source: "mesh", coordinates: [a, a] }, "Route geometry is invalid."],
-    ["non-finite latitude", { source: "mesh", coordinates: [a, [-123, NaN]] }, "Route geometry is invalid."],
-    ["infinite longitude", { source: "mesh", coordinates: [a, [Infinity, 48]] }, "Route geometry is invalid."],
-    ["longitude at 180", { source: "mesh", coordinates: [a, [180, 48]] }, "Route geometry is invalid."],
-    ["longitude below -180", { source: "mesh", coordinates: [a, [-181, 48]] }, "Route geometry is invalid."],
-    ["latitude above 90", { source: "mesh", coordinates: [a, [-123, 91]] }, "Route geometry is invalid."],
-    ["latitude below -90", { source: "mesh", coordinates: [a, [-123, -91]] }, "Route geometry is invalid."],
+    ["too few points", { source: "mesh", coordinates: [departure] }, "Route geometry is invalid."],
+    ["one distinct point", { source: "mesh", coordinates: [departure, departure] }, "Route geometry is invalid."],
+    ["non-finite latitude", { source: "mesh", coordinates: [departure, [-123, NaN]] }, "Route geometry is invalid."],
+    ["infinite longitude", { source: "mesh", coordinates: [departure, [Infinity, 48]] }, "Route geometry is invalid."],
+    ["longitude at 180", { source: "mesh", coordinates: [departure, [180, 48]] }, "Route geometry is invalid."],
+    ["longitude below -180", { source: "mesh", coordinates: [departure, [-181, 48]] }, "Route geometry is invalid."],
+    ["latitude above 90", { source: "mesh", coordinates: [departure, [-123, 91]] }, "Route geometry is invalid."],
+    ["latitude below -90", { source: "mesh", coordinates: [departure, [-123, -91]] }, "Route geometry is invalid."],
   ] satisfies [string, RouteLeg["track"], string][])("blocks %s geometry", (_label, track, reason) => {
-    expect(buildGpxExport([day(1, "a", "b", { ...leg("a", "b", [a, b]), track })], places, "ready"))
+    expect(buildGpxExport([day(1, "a", "b", { ...leg("a", "b", [departure, secondStop]), track })], places, "ready"))
       .toEqual({ status: "unavailable", reason: `Day 1: ${reason}` });
   });
 
   it("blocks coordinate and stop discontinuities within and between days", () => {
-    const discontinuousLegs = day(1, "a", "c", leg("a", "b", [a, b]), leg("b", "c", [bend, c]));
-    const discontinuousStops = day(1, "a", "c", leg("a", "b", [a, b]), leg("a", "c", [b, c]));
+    const discontinuousLegs = day(1, "a", "c", leg("a", "b", [departure, secondStop]), leg("b", "c", [bend, thirdStop]));
+    const discontinuousStops = day(1, "a", "c", leg("a", "b", [departure, secondStop]), leg("a", "c", [secondStop, thirdStop]));
     for (const broken of [discontinuousLegs, discontinuousStops]) {
       expect(buildGpxExport([broken], places, "ready")).toEqual({
         status: "unavailable", reason: "Day 1: Route geometry is discontinuous.",
       });
     }
-    const shifted = day(2, "c", "a", leg("c", "a", [b, a]));
+    const shifted = day(2, "c", "a", leg("c", "a", [secondStop, departure]));
     expect(buildGpxExport([first, shifted], places, "ready")).toEqual({
       status: "unavailable", reason: "Day 2: Route geometry is discontinuous.",
     });
