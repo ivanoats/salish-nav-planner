@@ -194,6 +194,10 @@ npm run mesh:coastline # cache the OSM shoreline the mesh is traced from
 npm run mesh         # rebuild public/data/salish-mesh.json
 ```
 
+The unit suite uses `xmllint` for offline GPX schema validation. On Ubuntu,
+install the `libxml2-utils` package. See the [GPX verification record](docs/gpx-route-verification.md)
+for review mode and release criteria.
+
 ### End-to-end tests
 
 `npm run test:e2e` builds the app, starts it on port 3100 and runs the

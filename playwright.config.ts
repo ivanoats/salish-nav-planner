@@ -38,6 +38,7 @@ export default defineConfig({
     env: {
       SCRAPED_DATA_DIR: "e2e/fixtures/dataset",
       SYNTHETIC_CONDITIONS: "1",
+      ENABLE_GPX_EXPORT: "1",
       NEXT_PUBLIC_CHART_PMTILES_URL: "",
       NEXT_TELEMETRY_DISABLED: "1",
     },

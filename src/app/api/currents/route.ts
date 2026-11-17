@@ -14,7 +14,7 @@ const provider = usesSyntheticConditions() ? syntheticCurrentPredictions : new R
  * any real plan. It's a guard against a caller fanning the whole registry
  * out across two public agencies at once, not a limit anyone should meet.
  */
-export const MAX_PASSES_PER_REQUEST = 24;
+const MAX_PASSES_PER_REQUEST = 24;
 
 export interface PassCurrentsResponse {
   readonly passId: string;

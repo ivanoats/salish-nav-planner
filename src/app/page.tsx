@@ -28,6 +28,7 @@ export default async function Home({ searchParams }: HomeProps) {
       windZones={windZones}
       obstructions={obstructions}
       chartPmtilesUrl={process.env.NEXT_PUBLIC_CHART_PMTILES_URL}
+      gpxExportEnabled={process.env.ENABLE_GPX_EXPORT === "1"}
       initialTripState={sharedTrip.state}
       sharedTripIssues={sharedTrip.issues}
       hasIncomingSharedTrip={sharedTrip.hasSharedTrip}

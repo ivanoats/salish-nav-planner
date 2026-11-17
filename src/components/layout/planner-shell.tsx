@@ -9,6 +9,7 @@ import { TripControls } from "@/components/panels/trip-controls";
 import { DayItinerary } from "@/components/panels/day-itinerary";
 import { MapApp } from "@/components/map/map-app";
 import { PrintButton } from "@/components/panels/print-button";
+import { DownloadGpx } from "@/components/panels/download-gpx";
 import {
   SharedTripWarning,
   ShareRouteControls,
@@ -22,6 +23,7 @@ import type {
   SharedTripIssue,
   SharedTripState,
 } from "@/application/shareable-trip-url";
+import { buildGpxExport } from "@/application/gpx-export";
 import type { Location, Waypoint } from "@/domain/location";
 import { buildMeshGraph, type MeshFeatureCollection, type MeshGraph } from "@/domain/mesh-route";
 import type { Obstruction } from "@/domain/obstruction";
@@ -37,6 +39,7 @@ interface PlannerShellProps {
   readonly windZones: readonly WindZone[];
   readonly obstructions: readonly Obstruction[];
   readonly chartPmtilesUrl?: string;
+  readonly gpxExportEnabled: boolean;
   readonly initialTripState: SharedTripState | null;
   readonly sharedTripIssues: readonly SharedTripIssue[];
   readonly hasIncomingSharedTrip: boolean;
@@ -50,6 +53,7 @@ export function PlannerShell({
   windZones,
   obstructions,
   chartPmtilesUrl,
+  gpxExportEnabled,
   initialTripState,
   sharedTripIssues,
   hasIncomingSharedTrip,
@@ -60,6 +64,7 @@ export function PlannerShell({
   );
 
   const [mesh, setMesh] = useState<MeshGraph | null>(null);
+  const [meshFailed, setMeshFailed] = useState(false);
   const trip = useTripPlan(composition, initialTripState, mesh);
   const sharedTripState = sharedTripStateFromPlan(trip);
   useShareableTripUrl(sharedTripState, hasIncomingSharedTrip);
@@ -71,6 +76,7 @@ export function PlannerShell({
       const controller = new AbortController();
 
       const load = async () => {
+        setMeshFailed(false);
         const response = await fetch("/data/salish-mesh.json", { signal: controller.signal });
         if (!response.ok) throw new Error(`HTTP ${response.status}`);
         const collection: MeshFeatureCollection = await response.json();
@@ -78,7 +84,10 @@ export function PlannerShell({
       };
 
       load().catch((error: unknown) => {
-        if (!controller.signal.aborted) console.warn("[planner] Navigation mesh unavailable.", error);
+        if (!controller.signal.aborted) {
+          setMeshFailed(true);
+          console.warn("[planner] Navigation mesh unavailable.", error);
+        }
       });
       cancelLoad = () => controller.abort();
     }
@@ -89,6 +98,12 @@ export function PlannerShell({
     () => new Map(locations.map((l) => [l.slug, l] as const)),
     [locations]
   );
+
+  const gpx = useMemo(() => {
+    if (!gpxExportEnabled) return null;
+    const geometry = mesh !== null ? "ready" : meshFailed ? "unavailable" : "loading";
+    return buildGpxExport(trip.tripDays, locationsBySlug, geometry);
+  }, [gpxExportEnabled, trip.tripDays, locationsBySlug, mesh, meshFailed]);
 
   const stopLocations = useMemo(
     () =>
@@ -219,6 +234,7 @@ export function PlannerShell({
         ) : null}
 
         {sharedTripState !== null ? <ShareRouteControls state={sharedTripState} /> : null}
+        {gpx !== null ? <DownloadGpx exportResult={gpx} /> : null}
         {hasRoutes ? <PrintButton /> : null}
       </aside>
 

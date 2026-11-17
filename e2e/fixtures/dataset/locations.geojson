@@ -105,6 +105,18 @@
         "name": "Port Townsend",
         "region": "US"
       }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [-123.01, 48.54]
+      },
+      "properties": {
+        "slug": "friday_harbor",
+        "name": "Friday Harbor",
+        "region": "US"
+      }
     }
   ]
 }
