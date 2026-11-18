@@ -198,6 +198,10 @@ The unit suite uses `xmllint` for offline GPX schema validation. On Ubuntu,
 install the `libxml2-utils` package. See the [GPX verification record](docs/gpx-route-verification.md)
 for review mode and release criteria.
 
+When updating Panda CSS, keep `@pandacss/dev` and `@pandacss/preset-base`
+on the same version. Panda CSS 2 does not install the base preset for us,
+but `panda.config.ts` still loads it alongside the Park UI preset.
+
 ### End-to-end tests
 
 `npm run test:e2e` builds the app, starts it on port 3100 and runs the
